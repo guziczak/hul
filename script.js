@@ -4,6 +4,8 @@ const hero = document.querySelector(".hero");
 const menuToggle = document.querySelector(".menu-toggle");
 const mobileLinks = document.querySelector(".header__mobile-links");
 
+if (header && hero) hero.insertAdjacentElement("afterend", header);
+
 function setMenu(open) {
   header.classList.toggle("header--open", open);
   menuToggle.setAttribute("aria-expanded", String(open));
