@@ -4,13 +4,12 @@ const hero = document.querySelector(".hero");
 const menuToggle = document.querySelector(".menu-toggle");
 const mobileLinks = document.querySelector(".header__mobile-links");
 
-if (header && hero) hero.insertAdjacentElement("afterend", header);
-
 function setMenu(open) {
   header.classList.toggle("header--open", open);
   menuToggle.setAttribute("aria-expanded", String(open));
   menuToggle.setAttribute("aria-label", open ? "Zamknij menu" : "Otwórz menu");
   mobileLinks.setAttribute("aria-hidden", String(!open));
+  mobileLinks.inert = !open;
   updateHeader();
 }
 
@@ -20,6 +19,12 @@ menuToggle?.addEventListener("click", () => {
 
 mobileLinks?.querySelectorAll("a").forEach((link) => {
   link.addEventListener("click", () => setMenu(false));
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !header.classList.contains("header--open")) return;
+  setMenu(false);
+  menuToggle.focus();
 });
 
 let headerFrame = 0;
@@ -55,58 +60,97 @@ function requestHeaderUpdate() {
 }
 
 window.addEventListener("scroll", requestHeaderUpdate, { passive: true });
-window.addEventListener("resize", requestHeaderUpdate, { passive: true });
-updateHeader();
+window.addEventListener("resize", () => {
+  if (window.innerWidth >= 1200 && header.classList.contains("header--open")) setMenu(false);
+  requestHeaderUpdate();
+}, { passive: true });
+setMenu(false);
 
 function splitHeading(heading) {
-  const text = heading.textContent.trim();
+  const text = heading.dataset.revealText || heading.textContent.trim();
   const words = text.split(/\s+/);
-  let characterIndex = 0;
+  const lineGroups = [];
+  let lastTop = null;
+  const preferredLines = window.innerWidth <= 809
+    ? heading.dataset.linesMobile
+    : heading.dataset.linesDesktop;
 
+  heading.dataset.revealText = text;
   heading.setAttribute("aria-label", text);
   heading.textContent = "";
 
-  words.forEach((word, wordIndex) => {
-    const wordElement = document.createElement("span");
-    wordElement.className = "split-word";
-    wordElement.setAttribute("aria-hidden", "true");
-
-    Array.from(word).forEach((character) => {
-      const characterElement = document.createElement("span");
-      characterElement.className = "split-char";
-      characterElement.style.setProperty("--char-delay", `${100 + characterIndex * 12}ms`);
-      characterElement.textContent = character;
-      wordElement.append(characterElement);
-      characterIndex += 1;
+  if (preferredLines) {
+    preferredLines.split("|").forEach((line) => lineGroups.push(line.trim().split(/\s+/)));
+  } else {
+    words.forEach((word, wordIndex) => {
+      const wordElement = document.createElement("span");
+      wordElement.className = "split-measure-word";
+      wordElement.setAttribute("aria-hidden", "true");
+      wordElement.textContent = word;
+      heading.append(wordElement);
+      if (wordIndex < words.length - 1) heading.append(document.createTextNode(" "));
     });
 
-    heading.append(wordElement);
-    if (wordIndex < words.length - 1) heading.append(document.createTextNode(" "));
+    heading.querySelectorAll(".split-measure-word").forEach((wordElement) => {
+      const top = Math.round(wordElement.offsetTop);
+      if (lastTop === null || Math.abs(top - lastTop) > 2) {
+        lineGroups.push([]);
+        lastTop = top;
+      }
+      lineGroups.at(-1).push(wordElement.textContent);
+    });
+  }
+
+  heading.textContent = "";
+  lineGroups.forEach((lineWords, lineIndex) => {
+    const line = document.createElement("span");
+    line.className = "split-line";
+    line.setAttribute("aria-hidden", "true");
+    line.style.setProperty("--line-delay", `${lineIndex * 100}ms`);
+    line.textContent = lineWords.join(" ");
+    heading.append(line);
   });
 
   heading.closest(".reveal")?.classList.add("reveal--chars");
 }
 
-document.querySelectorAll("[data-reveal-chars]").forEach(splitHeading);
+document.fonts.ready.then(() => {
+  document.querySelectorAll("[data-reveal-chars]").forEach(splitHeading);
 
-const revealObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.add("is-visible");
-      revealObserver.unobserve(entry.target);
-    });
-  },
-  { threshold: 0, rootMargin: "0px 0px -4% 0px" },
-);
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        revealObserver.unobserve(entry.target);
+      });
+    },
+    { threshold: 0 },
+  );
 
-document.querySelectorAll(".reveal").forEach((element) => revealObserver.observe(element));
+  document.querySelectorAll(".reveal").forEach((element) => revealObserver.observe(element));
+  window.clearTimeout(window.__hulRevealFallback);
+
+  let headingResizeTimer = 0;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(headingResizeTimer);
+    headingResizeTimer = window.setTimeout(() => {
+      document.querySelectorAll("[data-reveal-chars]").forEach(splitHeading);
+    }, 120);
+  }, { passive: true });
+}).catch(() => {
+  root.classList.remove("js");
+});
 
 document.querySelectorAll(".faq-item__question").forEach((button) => {
+  const item = button.closest(".faq-item");
+  const answer = document.getElementById(button.getAttribute("aria-controls"));
+  answer?.setAttribute("aria-hidden", String(!item.classList.contains("faq-item--open")));
+
   button.addEventListener("click", () => {
-    const item = button.closest(".faq-item");
     const open = item.classList.toggle("faq-item--open");
     button.setAttribute("aria-expanded", String(open));
+    answer?.setAttribute("aria-hidden", String(!open));
   });
 });
 
