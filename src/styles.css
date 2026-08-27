@@ -1001,12 +1001,17 @@ main {
 }
 
 @media (max-width: 809px) {
-  .reveal {
+  .js .reveal {
     transform: translate3d(0, 56px, 0);
   }
 
-  .reveal.is-visible {
+  .js .reveal.is-visible {
     transform: translate3d(0, 0, 0);
+  }
+
+  .js .reveal--chars,
+  .js .reveal--chars.is-visible {
+    transform: none;
   }
 
   .chip {
@@ -1019,8 +1024,9 @@ main {
 
   .header--open {
     height: 208px;
-    background: rgba(20, 30, 24, 0.7);
-    backdrop-filter: blur(16px);
+    background: var(--paper);
+    color: var(--ink);
+    backdrop-filter: none;
   }
 
   .header__top {
@@ -1081,7 +1087,7 @@ main {
     width: 20px;
     height: 2px;
     border-radius: 2px;
-    background: var(--paper);
+    background: currentColor;
     transition:
       top 360ms var(--ease-out),
       transform 360ms var(--ease-out),
@@ -1121,12 +1127,17 @@ main {
     min-height: 680px;
   }
 
+  .hero-spacer {
+    height: 97vh;
+    min-height: 680px;
+  }
+
   .hero__media img {
     object-position: center;
   }
 
   .hero__shade {
-    background: rgba(8, 12, 9, 0.34);
+    background: transparent;
   }
 
   .hero__content {
@@ -1288,7 +1299,7 @@ main {
 
   .faq {
     display: block;
-    height: 935px;
+    min-height: 935px;
     padding: 48px 16px;
   }
 
