@@ -71,7 +71,8 @@ function splitHeading(heading) {
   const words = text.split(/\s+/);
   const lineGroups = [];
   let lastTop = null;
-  const preferredLines = window.innerWidth <= 809
+  const linesBreakpoint = Number(heading.dataset.linesBreakpoint || 809);
+  const preferredLines = window.innerWidth <= linesBreakpoint
     ? heading.dataset.linesMobile
     : heading.dataset.linesDesktop;
 
