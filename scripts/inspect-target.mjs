@@ -7,8 +7,11 @@ const browser = await chromium.launch({
   headless: true,
 });
 
+const targetUrl = process.argv[2] || "https://cuddly-result-708677.framer.app/";
+const outputName = process.argv[3] || "hul-target-revealed-desktop.png";
+
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await page.goto("https://cuddly-result-708677.framer.app/", { waitUntil: "networkidle" });
+await page.goto(targetUrl, { waitUntil: "networkidle" });
 
 const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
 for (let y = 0; y < pageHeight; y += 500) {
@@ -78,7 +81,7 @@ const images = await page.locator("img").evaluateAll((nodes) =>
 );
 
 await page.screenshot({
-  path: path.join(os.tmpdir(), "hul-target-revealed-desktop.png"),
+  path: path.join(os.tmpdir(), outputName),
   fullPage: true,
 });
 
