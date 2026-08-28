@@ -315,7 +315,12 @@ function syncFloatingUiOffsets() {
   const heroContent = hero?.querySelector(".hero__content");
   const heroActions = heroContent?.querySelector(".hero__actions");
   const heroRect = hero?.getBoundingClientRect();
-  const heroContentBottom = heroContent ? parseFloat(getComputedStyle(heroContent).bottom) || 0 : 0;
+  const heroPositionProperty = root.classList.contains("consent-pending")
+    ? "--hero-content-consent-bottom"
+    : "--hero-content-resting-bottom";
+  const heroContentBottom = hero
+    ? parseFloat(getComputedStyle(hero).getPropertyValue(heroPositionProperty)) || 0
+    : 0;
 
   if (quickActions) {
     const bannerOffset = banner && !banner.hidden
