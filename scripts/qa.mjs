@@ -78,6 +78,10 @@ const desktop = await page.evaluate(() => ({
     background: getComputedStyle(button).backgroundColor,
     blur: getComputedStyle(button).backdropFilter,
   })),
+  heroHeader: {
+    background: getComputedStyle(document.querySelector(".header")).backgroundColor,
+    blur: getComputedStyle(document.querySelector(".header")).backdropFilter,
+  },
   quickActions: {
     phoneHref: document.querySelector(".quick-action--phone")?.getAttribute("href"),
     topHref: document.querySelector("[data-scroll-top]")?.getAttribute("href"),
@@ -107,6 +111,7 @@ assert(!desktop.privacy.analyticsScript && !desktop.privacy.interactiveMap, "Opt
 assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section starts with a local map preview");
 assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
+assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
 assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "The phone is immediately available while the back-to-top action stays hidden at the page top");
 
 const cookieBanner = page.locator("[data-cookie-banner]");

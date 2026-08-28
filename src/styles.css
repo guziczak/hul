@@ -361,7 +361,10 @@ main {
   left: 0;
   height: 64px;
   overflow: hidden;
+  background: rgba(22, 35, 27, 0.36);
   color: var(--paper);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   transform: translateY(var(--header-translate, 0));
   transition:
     height 560ms var(--ease-out),
@@ -372,6 +375,8 @@ main {
 .header--scrolled {
   background: var(--paper);
   color: var(--ink);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .header--scrolled .logo {
