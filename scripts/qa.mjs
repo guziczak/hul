@@ -107,7 +107,7 @@ assert(!desktop.privacy.analyticsScript && !desktop.privacy.interactiveMap, "Opt
 assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section starts with a local map preview");
 assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
-assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && !desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "Floating actions have correct targets and stay hidden at the page top");
+assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "The phone is immediately available while the back-to-top action stays hidden at the page top");
 
 const cookieBanner = page.locator("[data-cookie-banner]");
 await cookieBanner.waitFor({ state: "visible" });
@@ -178,7 +178,7 @@ const visibleQuickActions = await page.evaluate(() => ({
   phone: document.querySelector(".quick-action--phone").classList.contains("is-visible"),
   top: document.querySelector("[data-scroll-top]").classList.contains("is-visible"),
 }));
-assert(visibleQuickActions.phone && visibleQuickActions.top, "Phone and back-to-top actions appear only after meaningful scrolling");
+assert(visibleQuickActions.phone && visibleQuickActions.top, "The phone remains available and the back-to-top action appears after meaningful scrolling");
 await page.locator("[data-scroll-top]").click();
 await page.waitForFunction(() => window.scrollY <= 1);
 assert(await page.evaluate(() => location.hash === "#top"), "The floating arrow returns to the document top");

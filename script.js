@@ -191,14 +191,12 @@ if (reducedMotion.matches) {
 
 /* Floating phone and back-to-top controls */
 const quickActions = document.querySelector("[data-quick-actions]");
-const quickPhone = quickActions?.querySelector(".quick-action--phone");
 const quickTop = quickActions?.querySelector("[data-scroll-top]");
 let quickActionsFrame = 0;
 
 function updateQuickActions() {
   if (!quickActions || !hero) return;
   const heroHeight = hero.getBoundingClientRect().height;
-  quickPhone?.classList.toggle("is-visible", window.scrollY >= heroHeight * 0.9);
   quickTop?.classList.toggle("is-visible", window.scrollY >= Math.max(heroHeight * 1.25, window.innerHeight * 1.5));
 }
 
