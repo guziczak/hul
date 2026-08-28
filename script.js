@@ -275,7 +275,7 @@ if (reducedMotion.matches) {
 /* Floating phone and back-to-top controls */
 const quickActions = document.querySelector("[data-quick-actions]");
 const quickTop = quickActions?.querySelector("[data-scroll-top]");
-let quickActionsFrame = 0;
+let floatingUiFrame = 0;
 
 function updateQuickActions() {
   if (!quickActions || !hero) return;
@@ -283,36 +283,55 @@ function updateQuickActions() {
   quickTop?.classList.toggle("is-visible", window.scrollY >= Math.max(heroHeight * 1.25, window.innerHeight * 1.5));
 }
 
-function requestQuickActionsUpdate() {
-  if (quickActionsFrame) return;
-  quickActionsFrame = requestAnimationFrame(() => {
+function requestFloatingUiUpdate() {
+  if (floatingUiFrame) return;
+  floatingUiFrame = requestAnimationFrame(() => {
     updateQuickActions();
-    syncQuickActionsOffset();
-    quickActionsFrame = 0;
+    syncFloatingUiOffsets();
+    floatingUiFrame = 0;
   });
 }
 
-function syncQuickActionsOffset() {
-  if (!quickActions) return;
+function syncFloatingUiOffsets() {
   const mobile = window.innerWidth <= 809;
-  const normalBottom = mobile ? 16 : 20;
+  const viewportGap = mobile ? 8 : 20;
+  const quickActionsBaseBottom = mobile ? 16 : 20;
+  const cookieBannerBaseBottom = mobile ? 8 : 20;
   const banner = document.querySelector("[data-cookie-banner]");
-  const bannerOffset = banner && !banner.hidden
-    ? banner.offsetHeight + (mobile ? 20 : 32)
-    : normalBottom;
   const footer = document.querySelector(".footer");
   const footerRect = footer?.getBoundingClientRect();
   const visibleFooterHeight = footerRect
     ? Math.max(0, Math.min(footerRect.height, window.innerHeight - footerRect.top))
     : 0;
-  const footerOffset = normalBottom + visibleFooterHeight;
-  quickActions.style.setProperty("--quick-actions-bottom", `${Math.max(normalBottom, bannerOffset, footerOffset)}px`);
+
+  let cookieBannerBottom = cookieBannerBaseBottom;
+  if (banner && !banner.hidden) {
+    const requestedBottom = cookieBannerBaseBottom + visibleFooterHeight;
+    const maximumBottom = Math.max(cookieBannerBaseBottom, window.innerHeight - banner.offsetHeight - viewportGap);
+    cookieBannerBottom = Math.min(requestedBottom, maximumBottom);
+  }
+  banner?.style.setProperty("--cookie-banner-bottom", `${cookieBannerBottom}px`);
+
+  if (!quickActions) return;
+  const bannerOffset = banner && !banner.hidden
+    ? cookieBannerBottom + banner.offsetHeight + 12
+    : quickActionsBaseBottom;
+  const footerOffset = quickActionsBaseBottom + visibleFooterHeight;
+  const requestedQuickActionsBottom = Math.max(quickActionsBaseBottom, bannerOffset, footerOffset);
+  const maximumQuickActionsBottom = Math.max(
+    quickActionsBaseBottom,
+    window.innerHeight - quickActions.offsetHeight - viewportGap,
+  );
+  quickActions.style.setProperty(
+    "--quick-actions-bottom",
+    `${Math.min(requestedQuickActionsBottom, maximumQuickActionsBottom)}px`,
+  );
 }
 
-window.addEventListener("scroll", requestQuickActionsUpdate, { passive: true });
+window.addEventListener("scroll", requestFloatingUiUpdate, { passive: true });
 window.addEventListener("resize", () => {
-  requestQuickActionsUpdate();
-  syncQuickActionsOffset();
+  requestFloatingUiUpdate();
+  syncFloatingUiOffsets();
 }, { passive: true });
 
 const contactCta = document.querySelector(".contact-cta");
@@ -325,7 +344,7 @@ if (quickActions && contactCta) {
 }
 
 updateQuickActions();
-syncQuickActionsOffset();
+syncFloatingUiOffsets();
 
 /* Privacy consent, Google Analytics and the interactive contact map */
 const PRIVACY_STORAGE_KEY = "hul:privacy-consent:v1";
@@ -345,8 +364,10 @@ const mapEnableButton = contactMap?.querySelector("[data-enable-map]");
 const footerPrivacyButton = document.querySelector("[data-open-privacy]");
 
 if (cookieBanner && typeof ResizeObserver === "function") {
-  const cookieBannerResizeObserver = new ResizeObserver(syncQuickActionsOffset);
+  const cookieBannerResizeObserver = new ResizeObserver(syncFloatingUiOffsets);
   cookieBannerResizeObserver.observe(cookieBanner);
+  const footer = document.querySelector(".footer");
+  if (footer) cookieBannerResizeObserver.observe(footer);
 }
 
 let bannerTimer = 0;
@@ -399,7 +420,7 @@ function showCookieBanner() {
   cookieBanner.hidden = false;
   cookieBanner.inert = false;
   cookieBanner.setAttribute("aria-hidden", "false");
-  syncQuickActionsOffset();
+  syncFloatingUiOffsets();
   requestAnimationFrame(() => cookieBanner.classList.add("is-visible"));
 }
 
@@ -412,7 +433,7 @@ function hideCookieBanner() {
   cookieBanner.classList.remove("is-visible");
   window.setTimeout(() => {
     cookieBanner.hidden = true;
-    syncQuickActionsOffset();
+    syncFloatingUiOffsets();
   }, reducedMotion.matches ? 0 : 430);
 }
 

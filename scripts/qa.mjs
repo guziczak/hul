@@ -140,6 +140,28 @@ const undecidedPrivacy = await page.evaluate(() => ({
 assert(undecidedPrivacy.ariaHidden === "false" && !undecidedPrivacy.inert, "The first-visit consent prompt becomes accessible and interactive");
 assert(undecidedPrivacy.background === "rgba(50, 38, 31, 0.97)", "The consent prompt uses the warm dark-oak brand surface");
 assert(undecidedPrivacy.externalRequests === 0 && undecidedPrivacy.cookies === "", "Showing the consent prompt does not contact third parties or set cookies");
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, document.documentElement.scrollHeight);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await page.waitForTimeout(520);
+const footerConsentLayout = await page.evaluate(() => {
+  const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  const footer = document.querySelector(".footer").getBoundingClientRect();
+  const quickActions = document.querySelector("[data-quick-actions]").getBoundingClientRect();
+  return {
+    footerGap: footer.top - banner.bottom,
+    actionsGap: banner.top - quickActions.bottom,
+    bannerTop: banner.top,
+  };
+});
+assert(footerConsentLayout.footerGap >= 19 && footerConsentLayout.actionsGap >= 11 && footerConsentLayout.bannerTop >= 20, "The desktop consent prompt clears the footer while floating actions remain above it");
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, 0);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
 await cookieBanner.locator("[data-consent-reject]").click();
 await cookieBanner.waitFor({ state: "hidden" });
 const rejectedPrivacy = await page.evaluate(() => ({
@@ -558,6 +580,23 @@ const mobileBannerLayout = await acceptPage.evaluate(() => ({
 assert(mobileBannerLayout.overflow === 0 && mobileBannerLayout.actions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= 568), "The complete consent prompt stays reachable at 320px");
 assert(new Set(mobileBannerLayout.actions.map((rect) => Math.round(rect.top))).size === 1 && mobileBannerLayout.copyLines <= 2 && mobileBannerLayout.bannerHeight <= 150, "The mobile consent prompt keeps three actions on one row and compact copy at 320px");
 assert(mobileBannerLayout.quickActions.length === 2 && mobileBannerLayout.quickActions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= mobileBannerLayout.bannerTop - 8), "Floating actions move above the mobile consent prompt without overlap");
+await acceptPage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, document.documentElement.scrollHeight);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await acceptPage.waitForTimeout(520);
+const mobileFooterConsentLayout = await acceptPage.evaluate(() => {
+  const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  const footer = document.querySelector(".footer").getBoundingClientRect();
+  const quickActions = document.querySelector("[data-quick-actions]").getBoundingClientRect();
+  return {
+    footerGap: footer.top - banner.bottom,
+    actionsGap: banner.top - quickActions.bottom,
+    bannerTop: banner.top,
+  };
+});
+assert(mobileFooterConsentLayout.footerGap >= 7 && mobileFooterConsentLayout.actionsGap >= 11 && mobileFooterConsentLayout.bannerTop >= 8, "The mobile consent prompt clears the footer without pushing floating controls off-screen");
 await acceptPage.locator("[data-consent-accept]").click();
 await acceptPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
 const acceptedPrivacy = await acceptPage.evaluate(() => ({
