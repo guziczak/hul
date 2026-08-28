@@ -497,16 +497,34 @@ main {
   height: 100%;
 }
 
+.hero__media {
+  display: block;
+  overflow: hidden;
+  background: var(--ink) url("../public/images/hero-desktop-placeholder.webp") center / cover no-repeat;
+}
+
 .hero__media img {
+  display: block;
+  min-width: 100%;
+  min-height: 100%;
+  max-width: none;
   object-fit: cover;
   object-position: center bottom;
-  filter: brightness(0.65);
-  transform: scale(1.001);
+  opacity: 1;
+}
+
+.js .hero__media img {
+  opacity: 0;
+}
+
+.js .hero__media.is-decoded img {
+  opacity: 1;
+  transition: opacity 420ms var(--ease-out);
 }
 
 .hero__shade {
   z-index: 1;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .hero__content {
@@ -2199,12 +2217,12 @@ body.privacy-open {
     min-height: 680px;
   }
 
-  .hero__media img {
-    object-position: center;
+  .hero__media {
+    background-image: url("../public/images/hero-mobile-placeholder.webp");
   }
 
-  .hero__shade {
-    background: transparent;
+  .hero__media img {
+    object-position: center;
   }
 
   .hero__content {

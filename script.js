@@ -4,6 +4,24 @@ const hero = document.querySelector(".hero");
 const menuToggle = document.querySelector(".menu-toggle");
 const mobileLinks = document.querySelector(".header__mobile-links");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const heroMedia = document.querySelector(".hero__media");
+const heroImage = heroMedia?.querySelector("[data-hero-image]");
+
+let heroDecodeVersion = 0;
+async function revealDecodedHero() {
+  if (!heroMedia || !heroImage || !heroImage.complete || !heroImage.naturalWidth) return;
+  const version = ++heroDecodeVersion;
+  try {
+    if (typeof heroImage.decode === "function") await heroImage.decode();
+    if (version === heroDecodeVersion) heroMedia.classList.add("is-decoded");
+  } catch {
+    // Keep the complete low-resolution placeholder instead of exposing partial pixels.
+  }
+}
+
+heroImage?.addEventListener("load", revealDecodedHero);
+heroImage?.addEventListener("error", () => heroMedia?.classList.remove("is-decoded"));
+revealDecodedHero();
 
 function setMenu(open) {
   header.classList.toggle("header--open", open);

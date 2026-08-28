@@ -73,8 +73,10 @@
     <main id="main-content" tabindex="-1">
       <section class="hero" aria-label="Hul — kuchnie z drewna na wymiar">
       <picture class="hero__media">
-        <source media="(max-width: 809px)" srcset="./public/images/hero-mobile-480.jpg 480w, ./public/images/hero-mobile-768.jpg 768w, ./public/images/hero-mobile.jpg 1280w" sizes="100vw" width="1280" height="1920" />
-        <img src="./public/images/hero-desktop.jpg" srcset="./public/images/hero-desktop-960.jpg 960w, ./public/images/hero-desktop-1440.jpg 1440w, ./public/images/hero-desktop.jpg 1920w" sizes="100vw" width="1920" height="1280" alt="Kuchnia z jasnego, litego drewna" fetchpriority="high" />
+        <source media="(min-width: 810px)" type="image/webp" srcset="./public/images/hero-desktop-960.webp 960w, ./public/images/hero-desktop-1440.webp 1440w, ./public/images/hero-desktop-1920.webp 1920w" sizes="100vw" width="1920" height="1280" />
+        <source media="(min-width: 810px)" srcset="./public/images/hero-desktop-960.jpg 960w, ./public/images/hero-desktop-1440.jpg 1440w, ./public/images/hero-desktop-1920.jpg 1920w" sizes="100vw" width="1920" height="1280" />
+        <source type="image/webp" srcset="./public/images/hero-mobile-480.webp 480w, ./public/images/hero-mobile-768.webp 768w, ./public/images/hero-mobile-1280.webp 1280w" sizes="100vw" width="1280" height="1920" />
+        <img src="./public/images/hero-mobile-1280.jpg" srcset="./public/images/hero-mobile-480.jpg 480w, ./public/images/hero-mobile-768.jpg 768w, ./public/images/hero-mobile-1280.jpg 1280w" sizes="100vw" width="1280" height="1920" alt="Kuchnia z jasnego, litego drewna" loading="eager" decoding="async" fetchpriority="high" data-hero-image />
       </picture>
       <div class="hero__shade" aria-hidden="true"></div>
 
