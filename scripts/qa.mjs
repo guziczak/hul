@@ -339,16 +339,23 @@ for (const width of [320, 431, 768, 810, 1200, 1664, 1920]) {
       const heading = document.querySelector(".hero h1");
       const button = document.querySelector(".hero__actions .motion-button");
       const style = getComputedStyle(button);
+      const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+      const phoneClearance = [...document.querySelectorAll(".hero__actions .motion-button")].every((action) => {
+        const rect = action.getBoundingClientRect();
+        return rect.right <= phone.left - 11 || rect.left >= phone.right + 11 || rect.bottom <= phone.top - 11 || rect.top >= phone.bottom + 11;
+      });
       return {
         lines: Number(heading.dataset.revealLines),
         fontSize: getComputedStyle(heading).fontSize,
         lineHeight: getComputedStyle(heading).lineHeight,
         buttonFontSize: style.fontSize,
         buttonPadding: style.paddingLeft,
+        phoneClearance,
       };
     });
     assert(hero.lines === 4 && hero.fontSize === "36px" && hero.lineHeight === "36px", "320px hero keeps the target four-line 36px heading");
     assert(hero.buttonFontSize === "16px" && hero.buttonPadding === "16px", "320px hero buttons keep target typography and padding");
+    assert(hero.phoneClearance, "The permanent phone action clears hero CTAs at 320px without a consent prompt");
     const cardOverlap = await page.evaluate(() => {
       const quote = document.querySelector(".expert-card__quote").getBoundingClientRect();
       const person = document.querySelector(".expert-card__person").getBoundingClientRect();
@@ -390,16 +397,23 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }
   const action = await shortPage.locator(".hero__actions").evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+    const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+    const phoneClearance = [...element.querySelectorAll(".motion-button")].every((button) => {
+      const buttonRect = button.getBoundingClientRect();
+      return buttonRect.right <= phone.left - 11 || buttonRect.left >= phone.right + 11 || buttonRect.bottom <= phone.top - 11 || buttonRect.top >= phone.bottom + 11;
+    });
     return {
       visible: getComputedStyle(element).opacity === "1",
       bottom: rect.bottom,
       bannerTop: banner.top,
+      phoneClearance,
       viewportHeight: innerHeight,
     };
   });
   assert(action.visible && action.bottom <= action.viewportHeight, `Hero actions stay visible at ${viewport.width}×${viewport.height}`);
   const requiredConsentGap = viewport.width <= 809 ? 15 : 19;
   assert(action.bottom <= action.bannerTop - requiredConsentGap, `Hero actions clear consent at ${viewport.width}x${viewport.height}`);
+  assert(action.phoneClearance, `Floating phone clears hero actions at ${viewport.width}x${viewport.height}`);
   await shortPage.close();
 }
 await shortContext.close();
