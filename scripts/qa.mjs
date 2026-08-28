@@ -119,10 +119,12 @@ await cookieBanner.waitFor({ state: "visible" });
 const undecidedPrivacy = await page.evaluate(() => ({
   ariaHidden: document.querySelector("[data-cookie-banner]").getAttribute("aria-hidden"),
   inert: document.querySelector("[data-cookie-banner]").inert,
+  background: getComputedStyle(document.querySelector("[data-cookie-banner]")).backgroundColor,
   externalRequests: performance.getEntriesByType("resource").filter((entry) => !entry.name.startsWith(location.origin)).length,
   cookies: document.cookie,
 }));
 assert(undecidedPrivacy.ariaHidden === "false" && !undecidedPrivacy.inert, "The first-visit consent prompt becomes accessible and interactive");
+assert(undecidedPrivacy.background === "rgba(50, 38, 31, 0.97)", "The consent prompt uses the warm dark-oak brand surface");
 assert(undecidedPrivacy.externalRequests === 0 && undecidedPrivacy.cookies === "", "Showing the consent prompt does not contact third parties or set cookies");
 await cookieBanner.locator("[data-consent-reject]").click();
 await cookieBanner.waitFor({ state: "hidden" });
@@ -158,24 +160,32 @@ await page.waitForTimeout(520);
 faqState = await page.locator(".faq-item").evaluateAll((items) => items.map((item) => item.classList.contains("faq-item--open")));
 assert(!faqState[0] && faqState[1], "Closing one FAQ does not close another");
 
-await page.evaluate(() => scrollTo(0, 300));
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, 300);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
 await page.waitForTimeout(80);
 let headerState = await page.locator(".header").evaluate((header) => ({
   translate: parseFloat(header.style.getPropertyValue("--header-translate")),
   unit: header.style.getPropertyValue("--header-translate").trim().slice(-2),
   scrolled: header.classList.contains("header--scrolled"),
 }));
-assert(headerState.translate < -5 && headerState.translate > -50 && headerState.unit === "px", "Header follows the scroll target with the measured Framer spring lag");
+assert(headerState.translate < -5 && headerState.translate > -50 && headerState.unit === "px", `Header follows the scroll target with the measured Framer spring lag (${headerState.translate}${headerState.unit})`);
 await page.waitForTimeout(520);
 headerState = await page.locator(".header").evaluate((header) => ({
   translate: parseFloat(header.style.getPropertyValue("--header-translate")),
   scrolled: header.classList.contains("header--scrolled"),
 }));
 assert(headerState.translate < -58 && headerState.translate > -70, "Header spring settles at the original pixel-based scroll target");
-await page.evaluate(() => scrollTo(0, 700));
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, 700);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
 await page.waitForTimeout(80);
 const returningHeaderTranslate = await page.locator(".header").evaluate((header) => parseFloat(header.style.getPropertyValue("--header-translate")));
-assert(returningHeaderTranslate > headerState.translate && returningHeaderTranslate < -5, "Header retains visible inertia while returning after the scroll phase");
+assert(returningHeaderTranslate > headerState.translate && returningHeaderTranslate < -5, `Header retains visible inertia while returning after the scroll phase (${returningHeaderTranslate}px)`);
 await page.waitForTimeout(520);
 headerState = await page.locator(".header").evaluate((header) => ({
   translate: parseFloat(header.style.getPropertyValue("--header-translate")),
@@ -332,6 +342,27 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }
   assert(action.visible && action.bottom <= action.viewportHeight, `Hero actions stay visible at ${viewport.width}×${viewport.height}`);
   await shortPage.close();
 }
+
+const iphonePage = await context.newPage();
+await iphonePage.setViewportSize({ width: 430, height: 932 });
+await iphonePage.goto(baseUrl, { waitUntil: "networkidle" });
+const iphoneHero = await iphonePage.evaluate(() => {
+  const heroRect = document.querySelector(".hero").getBoundingClientRect();
+  const spacerRect = document.querySelector(".hero-spacer").getBoundingClientRect();
+  return {
+    viewportHeight: innerHeight,
+    heroHeight: heroRect.height,
+    heroBottom: heroRect.bottom,
+    spacerHeight: spacerRect.height,
+  };
+});
+assert(
+  Math.abs(iphoneHero.heroHeight - iphoneHero.viewportHeight) <= 1
+    && Math.abs(iphoneHero.heroBottom - iphoneHero.viewportHeight) <= 1
+    && Math.abs(iphoneHero.spacerHeight - iphoneHero.viewportHeight) <= 1,
+  "The mobile hero fills an iPhone 15 Pro Max viewport without a bottom strip",
+);
+await iphonePage.close();
 
 const noJsPage = await browser.newPage({
   javaScriptEnabled: false,

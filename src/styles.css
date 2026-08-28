@@ -56,6 +56,7 @@
   -webkit-font-smoothing: antialiased;
   --paper: #f9f5eb;
   --ink: #16231b;
+  --oak: #32261f;
   --line: rgba(22, 35, 27, 0.16);
   --line-light: rgba(255, 255, 255, 0.16);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -1382,8 +1383,8 @@ body.privacy-open .quick-actions {
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  background: rgba(22, 35, 27, 0.97);
-  box-shadow: 0 24px 70px rgba(22, 35, 27, 0.32);
+  background: rgba(50, 38, 31, 0.97);
+  box-shadow: 0 24px 70px rgba(31, 22, 17, 0.34);
   color: var(--paper);
   opacity: 0;
   transform: translateY(24px);
@@ -2185,12 +2186,12 @@ body.privacy-open {
   }
 
   .hero {
-    height: 97vh;
+    height: 100svh;
     min-height: 680px;
   }
 
   .hero-spacer {
-    height: 97vh;
+    height: 100svh;
     min-height: 680px;
   }
 
