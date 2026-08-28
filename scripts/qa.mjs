@@ -349,17 +349,25 @@ await iphonePage.goto(baseUrl, { waitUntil: "networkidle" });
 const iphoneHero = await iphonePage.evaluate(() => {
   const heroRect = document.querySelector(".hero").getBoundingClientRect();
   const spacerRect = document.querySelector(".hero-spacer").getBoundingClientRect();
+  const mediaRect = document.querySelector(".hero__media").getBoundingClientRect();
+  const imageRect = document.querySelector(".hero__media img").getBoundingClientRect();
   return {
     viewportHeight: innerHeight,
     heroHeight: heroRect.height,
     heroBottom: heroRect.bottom,
     spacerHeight: spacerRect.height,
+    mediaHeight: mediaRect.height,
+    imageHeight: imageRect.height,
+    imageBottom: imageRect.bottom,
   };
 });
 assert(
   Math.abs(iphoneHero.heroHeight - iphoneHero.viewportHeight) <= 1
     && Math.abs(iphoneHero.heroBottom - iphoneHero.viewportHeight) <= 1
-    && Math.abs(iphoneHero.spacerHeight - iphoneHero.viewportHeight) <= 1,
+    && Math.abs(iphoneHero.spacerHeight - iphoneHero.viewportHeight) <= 1
+    && Math.abs(iphoneHero.mediaHeight - iphoneHero.viewportHeight) <= 1
+    && Math.abs(iphoneHero.imageHeight - iphoneHero.viewportHeight) <= 1
+    && Math.abs(iphoneHero.imageBottom - iphoneHero.viewportHeight) <= 1,
   "The mobile hero fills an iPhone 15 Pro Max viewport without a bottom strip",
 );
 await iphonePage.close();
