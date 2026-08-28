@@ -1,6 +1,6 @@
 @font-face {
   font-family: "Instrument Serif";
-  src: url("/fonts/instrument-serif.woff2") format("woff2");
+  src: url("../public/fonts/instrument-serif.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -8,7 +8,7 @@
 
 @font-face {
   font-family: "Inter";
-  src: url("/fonts/inter-regular-latin-ext.woff2") format("woff2");
+  src: url("../public/fonts/inter-regular-latin-ext.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -17,7 +17,7 @@
 
 @font-face {
   font-family: "Inter";
-  src: url("/fonts/inter-regular.woff2") format("woff2");
+  src: url("../public/fonts/inter-regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -26,7 +26,7 @@
 
 @font-face {
   font-family: "Inter";
-  src: url("/fonts/inter-medium.woff2") format("woff2");
+  src: url("../public/fonts/inter-medium.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -34,7 +34,7 @@
 
 @font-face {
   font-family: "DM Mono";
-  src: url("/fonts/dm-mono-medium.woff2") format("woff2");
+  src: url("../public/fonts/dm-mono-medium.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -42,7 +42,7 @@
 
 @font-face {
   font-family: "Zodiak";
-  src: url("/fonts/zodiak-bold.woff2") format("woff2");
+  src: url("../public/fonts/zodiak-bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -639,11 +639,11 @@ main {
 }
 
 .expert-card--light {
-  background-image: url("/images/card-light.svg");
+  background-image: url("../public/images/card-light.svg");
 }
 
 .expert-card--dark {
-  background-image: url("/images/card-dark.svg");
+  background-image: url("../public/images/card-dark.svg");
   color: var(--paper);
 }
 

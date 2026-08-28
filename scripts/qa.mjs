@@ -46,6 +46,9 @@ const desktop = await page.evaluate(() => ({
   externalRequests: performance.getEntriesByType("resource")
     .map((entry) => entry.name)
     .filter((url) => !url.startsWith(location.origin)),
+  rootAbsoluteAssets: [...document.querySelectorAll('link[rel="stylesheet"], link[rel="icon"], script[src], img[src], source[src], source[srcset]')]
+    .flatMap((element) => [element.getAttribute("href"), element.getAttribute("src"), element.getAttribute("srcset")])
+    .filter((value) => value?.startsWith("/")),
   missingAnchors: [...document.querySelectorAll('a[href^="#"]')]
     .map((link) => link.getAttribute("href"))
     .filter((href) => href !== "#" && !document.querySelector(href)),
@@ -68,6 +71,7 @@ assert(desktop.splitHeadings.every((heading) => heading.lineDelays.every(Boolean
 assert(desktop.images.filter((image) => image.loading !== "lazy").every((image) => image.complete && image.width > 0), "All initially requested desktop images decode");
 assert(desktop.overflow === 0, "Desktop has no horizontal overflow");
 assert(desktop.externalRequests.length === 0, "Local page makes no external production requests");
+assert(desktop.rootAbsoluteAssets.length === 0, "Static assets use GitHub Pages-safe relative paths");
 assert(desktop.missingAnchors.length === 0, "All internal anchors resolve");
 assert(Object.values(desktop.meta).every(Boolean), "SEO, social and schema metadata are present");
 assert(desktop.landmarkOrder, "Primary navigation precedes hero actions in DOM and focus order");
