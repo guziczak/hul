@@ -315,26 +315,7 @@ function syncFloatingUiOffsets() {
   const heroContent = hero?.querySelector(".hero__content");
   const heroActions = heroContent?.querySelector(".hero__actions");
   const heroRect = hero?.getBoundingClientRect();
-  let heroContentBottom = 0;
-  if (heroContent && hero && heroRect) {
-    const restingBottom = parseFloat(getComputedStyle(hero).getPropertyValue("--hero-content-resting-bottom")) || 0;
-    let requiredBottom = restingBottom;
-    if (banner && !banner.hidden) {
-      const bannerRestingTop = window.innerHeight - cookieBannerBaseBottom - banner.offsetHeight;
-      requiredBottom = Math.max(requiredBottom, heroRect.bottom - bannerRestingTop + (mobile ? 16 : 20));
-    }
-    const headerHeight = header?.querySelector(".header__top")?.offsetHeight || 64;
-    const maximumBottom = Math.max(
-      restingBottom,
-      heroRect.bottom - heroContent.offsetHeight - headerHeight - (mobile ? 12 : 20),
-    );
-    heroContentBottom = Math.min(requiredBottom, maximumBottom);
-    if (heroContentBottom > restingBottom + 0.5) {
-      heroContent.style.setProperty("--hero-content-bottom", `${heroContentBottom}px`);
-    } else {
-      heroContent.style.removeProperty("--hero-content-bottom");
-    }
-  }
+  const heroContentBottom = heroContent ? parseFloat(getComputedStyle(heroContent).bottom) || 0 : 0;
 
   if (quickActions) {
     const bannerOffset = banner && !banner.hidden

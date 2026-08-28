@@ -475,7 +475,7 @@ main {
 
 /* Hero */
 .hero {
-  --hero-content-resting-bottom: 112px;
+  --hero-content-resting-bottom: 134px;
   position: fixed;
   z-index: 1;
   top: 0;
@@ -534,7 +534,6 @@ main {
   bottom: var(--hero-content-bottom, var(--hero-content-resting-bottom));
   left: 32px;
   width: 640px;
-  transition: bottom 420ms var(--ease-out);
 }
 
 .hero__content .eyebrow {
@@ -1916,7 +1915,7 @@ body.privacy-open {
 
 @media (max-width: 1199px) and (min-width: 810px) {
   .hero {
-    --hero-content-resting-bottom: 80px;
+    --hero-content-resting-bottom: 190px;
   }
 
   .hero__content {
@@ -2216,7 +2215,7 @@ body.privacy-open {
   }
 
   .hero {
-    --hero-content-resting-bottom: 40px;
+    --hero-content-resting-bottom: 163px;
     height: 100vh;
     height: 100dvh;
     min-height: 680px;
@@ -2670,11 +2669,7 @@ body.privacy-open {
   }
 }
 
-@media (max-height: 639px) {
-  .hero {
-    --hero-content-resting-bottom: 24px;
-  }
-
+@media (max-height: 719px) {
   .hero,
   .hero-spacer {
     height: 100vh;

@@ -91,6 +91,7 @@ const desktop = await page.evaluate(() => ({
     pictureDisplay: getComputedStyle(document.querySelector(".hero__media")).display,
     shade: getComputedStyle(document.querySelector(".hero__shade")).backgroundColor,
   },
+  heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
   quickActions: {
     phoneHref: document.querySelector(".quick-action--phone")?.getAttribute("href"),
     topHref: document.querySelector("[data-scroll-top]")?.getAttribute("href"),
@@ -153,6 +154,7 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
   };
 });
 assert(desktopHeroConsentLayout.headerGap >= 19 && desktopHeroConsentLayout.bannerGap >= 19, "The desktop hero content stays between the header and an undecided consent prompt");
+assert(Math.abs(desktopHeroConsentLayout.actionsBottom - desktop.heroActionsBottom) <= 0.5, "Showing the consent prompt does not move hero content");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
@@ -183,9 +185,11 @@ const rejectedPrivacy = await page.evaluate(() => ({
   consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
   iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
   analytics: Boolean(document.querySelector("script[data-hul-analytics]")),
+  heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
 }));
 assert(rejectedPrivacy.consent?.version === 1 && !rejectedPrivacy.consent.analytics && !rejectedPrivacy.consent.maps, "Rejecting optional services stores an explicit category-level decision");
 assert(!rejectedPrivacy.iframe && !rejectedPrivacy.analytics, "Rejecting optional services leaves Google resources unloaded");
+assert(Math.abs(rejectedPrivacy.heroActionsBottom - desktop.heroActionsBottom) <= 0.5, "Saving consent leaves hero content at the same fixed height");
 
 for (let y = 0; y < await page.evaluate(() => document.documentElement.scrollHeight); y += 700) {
   await page.evaluate((top) => scrollTo(0, top), y);
@@ -334,7 +338,7 @@ assert(!(await page.locator(".header").evaluate((header) => header.classList.con
 
 for (const width of [320, 431, 768, 810, 1200, 1664, 1920]) {
   await page.setViewportSize({ width, height: 900 });
-  await page.waitForTimeout(220);
+  await page.waitForTimeout(width === 320 ? 520 : 220);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow === 0, `No horizontal overflow at ${width}px`);
   if (width === 320) {
