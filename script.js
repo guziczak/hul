@@ -312,56 +312,59 @@ function syncFloatingUiOffsets() {
   }
   banner?.style.setProperty("--cookie-banner-bottom", `${cookieBannerBottom}px`);
 
-  let quickActionsBottom = quickActionsBaseBottom;
+  const heroContent = hero?.querySelector(".hero__content");
+  const heroActions = heroContent?.querySelector(".hero__actions");
+  const heroRect = hero?.getBoundingClientRect();
+  let heroContentBottom = 0;
+  if (heroContent && hero && heroRect) {
+    const restingBottom = parseFloat(getComputedStyle(hero).getPropertyValue("--hero-content-resting-bottom")) || 0;
+    let requiredBottom = restingBottom;
+    if (banner && !banner.hidden) {
+      const bannerRestingTop = window.innerHeight - cookieBannerBaseBottom - banner.offsetHeight;
+      requiredBottom = Math.max(requiredBottom, heroRect.bottom - bannerRestingTop + (mobile ? 16 : 20));
+    }
+    const headerHeight = header?.querySelector(".header__top")?.offsetHeight || 64;
+    const maximumBottom = Math.max(
+      restingBottom,
+      heroRect.bottom - heroContent.offsetHeight - headerHeight - (mobile ? 12 : 20),
+    );
+    heroContentBottom = Math.min(requiredBottom, maximumBottom);
+    if (heroContentBottom > restingBottom + 0.5) {
+      heroContent.style.setProperty("--hero-content-bottom", `${heroContentBottom}px`);
+    } else {
+      heroContent.style.removeProperty("--hero-content-bottom");
+    }
+  }
+
   if (quickActions) {
     const bannerOffset = banner && !banner.hidden
       ? cookieBannerBottom + banner.offsetHeight + 12
       : quickActionsBaseBottom;
     const footerOffset = quickActionsBaseBottom + visibleFooterHeight;
-    const requestedQuickActionsBottom = Math.max(quickActionsBaseBottom, bannerOffset, footerOffset);
+    let requestedQuickActionsBottom = Math.max(quickActionsBaseBottom, bannerOffset, footerOffset);
+    const phoneAction = quickActions.querySelector(".quick-action--phone");
+    const heroButtons = [...(heroActions?.querySelectorAll(".motion-button") || [])];
+    if (phoneAction && heroRect && heroActions && heroButtons.length && window.scrollY < heroRect.height) {
+      const phoneRect = phoneAction.getBoundingClientRect();
+      const horizontalCollision = heroButtons.some((button) => {
+        const buttonRect = button.getBoundingClientRect();
+        return buttonRect.right > phoneRect.left - 12 && buttonRect.left < phoneRect.right + 12;
+      });
+      if (horizontalCollision) {
+        const heroActionsTargetBottom = heroRect.bottom - heroContentBottom;
+        const heroActionsTargetTop = heroActionsTargetBottom - heroActions.offsetHeight;
+        requestedQuickActionsBottom = Math.max(
+          requestedQuickActionsBottom,
+          window.innerHeight - heroActionsTargetTop + 12,
+        );
+      }
+    }
     const maximumQuickActionsBottom = Math.max(
       quickActionsBaseBottom,
       window.innerHeight - quickActions.offsetHeight - viewportGap,
     );
-    quickActionsBottom = Math.min(requestedQuickActionsBottom, maximumQuickActionsBottom);
+    const quickActionsBottom = Math.min(requestedQuickActionsBottom, maximumQuickActionsBottom);
     quickActions.style.setProperty("--quick-actions-bottom", `${quickActionsBottom}px`);
-  }
-
-  const heroContent = hero?.querySelector(".hero__content");
-  if (!heroContent || !hero) return;
-  const heroRect = hero.getBoundingClientRect();
-  const restingBottom = parseFloat(getComputedStyle(hero).getPropertyValue("--hero-content-resting-bottom")) || 0;
-  let requiredBottom = restingBottom;
-
-  if (banner && !banner.hidden) {
-    const bannerTargetTop = window.innerHeight - cookieBannerBottom - banner.offsetHeight;
-    requiredBottom = Math.max(requiredBottom, heroRect.bottom - bannerTargetTop + (mobile ? 16 : 20));
-  }
-
-  const phoneAction = quickActions?.querySelector(".quick-action--phone");
-  const heroButtons = [...heroContent.querySelectorAll(".hero__actions .motion-button")];
-  if (phoneAction && heroButtons.length) {
-    const phoneRect = phoneAction.getBoundingClientRect();
-    const horizontalCollision = heroButtons.some((button) => {
-      const buttonRect = button.getBoundingClientRect();
-      return buttonRect.right > phoneRect.left - 12 && buttonRect.left < phoneRect.right + 12;
-    });
-    if (horizontalCollision) {
-      const phoneTargetTop = window.innerHeight - quickActionsBottom - phoneAction.offsetHeight;
-      requiredBottom = Math.max(requiredBottom, heroRect.bottom - phoneTargetTop + 12);
-    }
-  }
-
-  const headerHeight = header?.querySelector(".header__top")?.offsetHeight || 64;
-  const maximumBottom = Math.max(
-    restingBottom,
-    heroRect.bottom - heroContent.offsetHeight - headerHeight - (mobile ? 12 : 20),
-  );
-  const heroContentBottom = Math.min(requiredBottom, maximumBottom);
-  if (heroContentBottom > restingBottom + 0.5) {
-    heroContent.style.setProperty("--hero-content-bottom", `${heroContentBottom}px`);
-  } else {
-    heroContent.style.removeProperty("--hero-content-bottom");
   }
 }
 
