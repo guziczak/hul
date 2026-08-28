@@ -443,7 +443,13 @@ function writeConsent({ analytics, maps }) {
 }
 
 function showCookieBanner() {
-  if (!cookieBanner || readConsent()) return;
+  if (!cookieBanner) return;
+  if (readConsent()) {
+    root.classList.remove("consent-pending");
+    syncFloatingUiOffsets();
+    return;
+  }
+  root.classList.add("consent-pending");
   cookieBanner.hidden = false;
   cookieBanner.inert = false;
   cookieBanner.setAttribute("aria-hidden", "false");
@@ -452,14 +458,20 @@ function showCookieBanner() {
 }
 
 function hideCookieBanner() {
-  if (!cookieBanner || cookieBanner.hidden) return;
+  if (!cookieBanner) return;
   window.clearTimeout(bannerTimer);
+  if (cookieBanner.hidden) {
+    root.classList.remove("consent-pending");
+    syncFloatingUiOffsets();
+    return;
+  }
   if (cookieBanner.contains(document.activeElement)) document.activeElement.blur();
   cookieBanner.inert = true;
   cookieBanner.setAttribute("aria-hidden", "true");
   cookieBanner.classList.remove("is-visible");
   window.setTimeout(() => {
     cookieBanner.hidden = true;
+    root.classList.remove("consent-pending");
     syncFloatingUiOffsets();
   }, reducedMotion.matches ? 0 : 430);
 }
@@ -654,9 +666,16 @@ window.addEventListener("storage", (event) => {
     location.reload();
     return;
   }
+  hideCookieBanner();
   applyConsent(consent);
 });
 
 const storedConsent = readConsent();
-if (storedConsent) applyConsent(storedConsent);
-else bannerTimer = window.setTimeout(showCookieBanner, reducedMotion.matches ? 0 : 650);
+if (storedConsent) {
+  root.classList.remove("consent-pending");
+  applyConsent(storedConsent);
+} else {
+  root.classList.add("consent-pending");
+  bannerTimer = window.setTimeout(showCookieBanner, reducedMotion.matches ? 0 : 650);
+}
+syncFloatingUiOffsets();

@@ -21,8 +21,18 @@
     <link rel="icon" href="./public/favicon.svg" type="image/svg+xml" />
     <title>Hul — kuchnie z drewna na wymiar</title>
     <script>
-      document.documentElement.classList.add("js");
-      window.__hulRevealFallback = window.setTimeout(() => document.documentElement.classList.remove("js"), 4000);
+      const earlyRoot = document.documentElement;
+      earlyRoot.classList.add("js");
+      try {
+        const earlyConsent = JSON.parse(localStorage.getItem("hul:privacy-consent:v1"));
+        const hasSavedConsent = earlyConsent?.version === 1
+          && typeof earlyConsent.analytics === "boolean"
+          && typeof earlyConsent.maps === "boolean";
+        if (!hasSavedConsent) earlyRoot.classList.add("consent-pending");
+      } catch {
+        earlyRoot.classList.add("consent-pending");
+      }
+      window.__hulRevealFallback = window.setTimeout(() => earlyRoot.classList.remove("js", "consent-pending"), 4000);
     </script>
     <link rel="stylesheet" href="./src/styles.css" />
     <script type="application/ld+json">
