@@ -307,7 +307,9 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }
   await shortPage.setViewportSize(viewport);
   await shortPage.goto(baseUrl, { waitUntil: "networkidle" });
   await shortPage.evaluate(() => document.fonts.ready);
-  await shortPage.waitForTimeout(180);
+  // The hero reveal runs for 600ms after a 100ms delay. Wait for the
+  // completed visual state so this layout assertion is not frame-timing dependent.
+  await shortPage.waitForTimeout(760);
   const action = await shortPage.locator(".hero__actions").evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return { visible: getComputedStyle(element).opacity === "1", bottom: rect.bottom, viewportHeight: innerHeight };
