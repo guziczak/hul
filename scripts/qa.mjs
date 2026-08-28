@@ -149,6 +149,7 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
   return {
     headerGap: content.top - header.bottom,
     bannerGap: banner.top - actions.bottom,
+    actionsBottom: actions.bottom,
   };
 });
 assert(desktopHeroConsentLayout.headerGap >= 19 && desktopHeroConsentLayout.bannerGap >= 19, "The desktop hero content stays between the header and an undecided consent prompt");
@@ -166,9 +167,11 @@ const footerConsentLayout = await page.evaluate(() => {
     footerGap: footer.top - banner.bottom,
     actionsGap: banner.top - quickActions.bottom,
     bannerTop: banner.top,
+    heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
   };
 });
 assert(footerConsentLayout.footerGap >= 19 && footerConsentLayout.actionsGap >= 11 && footerConsentLayout.bannerTop >= 20, "The desktop consent prompt clears the footer while floating actions remain above it");
+assert(Math.abs(footerConsentLayout.heroActionsBottom - desktopHeroConsentLayout.actionsBottom) <= 0.5, "Footer movement does not change the hero content height");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, 0);
@@ -386,6 +389,7 @@ for (const width of [320, 431, 768, 810, 1200, 1664, 1920]) {
 }
 
 const shortContext = await browser.newContext();
+const shortMobileHeroBottoms = [];
 for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }, { width: 810, height: 600 }, { width: 1200, height: 600 }]) {
   const shortPage = await shortContext.newPage();
   await shortPage.setViewportSize(viewport);
@@ -414,8 +418,10 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }
   const requiredConsentGap = viewport.width <= 809 ? 15 : 19;
   assert(action.bottom <= action.bannerTop - requiredConsentGap, `Hero actions clear consent at ${viewport.width}x${viewport.height}`);
   assert(action.phoneClearance, `Floating phone clears hero actions at ${viewport.width}x${viewport.height}`);
+  if (viewport.height === 568) shortMobileHeroBottoms.push(action.bottom);
   await shortPage.close();
 }
+assert(Math.max(...shortMobileHeroBottoms) - Math.min(...shortMobileHeroBottoms) <= 0.5, "Short mobile hero content keeps one stable vertical position across widths");
 await shortContext.close();
 
 const iphoneContext = await browser.newContext({
@@ -598,6 +604,7 @@ const mobileHeroConsentLayout = await acceptPage.evaluate(() => {
   return {
     headerGap: content.top - header.bottom,
     bannerGap: banner.top - actions.bottom,
+    actionsBottom: actions.bottom,
   };
 });
 assert(mobileHeroConsentLayout.headerGap >= 11 && mobileHeroConsentLayout.bannerGap >= 15, "The 320px hero lifts above consent without entering the mobile header");
@@ -642,9 +649,11 @@ const mobileFooterConsentLayout = await acceptPage.evaluate(() => {
     footerGap: footer.top - banner.bottom,
     actionsGap: banner.top - quickActions.bottom,
     bannerTop: banner.top,
+    heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
   };
 });
 assert(mobileFooterConsentLayout.footerGap >= 7 && mobileFooterConsentLayout.actionsGap >= 11 && mobileFooterConsentLayout.bannerTop >= 8, "The mobile consent prompt clears the footer without pushing floating controls off-screen");
+assert(Math.abs(mobileFooterConsentLayout.heroActionsBottom - mobileHeroConsentLayout.actionsBottom) <= 0.5, "Mobile footer movement leaves hero content at its fixed consent height");
 await acceptPage.locator("[data-consent-accept]").click();
 await acceptPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
 const acceptedPrivacy = await acceptPage.evaluate(() => ({
