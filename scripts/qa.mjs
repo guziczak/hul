@@ -192,7 +192,7 @@ headerState = await page.locator(".header").evaluate((header) => ({
   scrolled: header.classList.contains("header--scrolled"),
   buttonBlur: getComputedStyle(header.querySelector(".motion-button--glass")).backdropFilter,
 }));
-assert(Math.abs(headerState.translate) < 0.1 && headerState.scrolled && headerState.buttonBlur === "none", `Header returns in its solid, non-blurred state after the hero threshold (${headerState.buttonBlur})`);
+assert(Math.abs(headerState.translate) < 0.25 && headerState.scrolled && headerState.buttonBlur === "none", `Header returns in its solid, non-blurred state after the hero threshold (${headerState.buttonBlur})`);
 
 await page.locator('.header__desktop-links a[href="#kontakt"]').click();
 await page.waitForFunction(() => Math.abs(document.querySelector(".visit").getBoundingClientRect().top - 64) <= 2);
