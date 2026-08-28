@@ -32,6 +32,7 @@ await page.waitForTimeout(250);
 
 const desktop = await page.evaluate(() => ({
   js: document.documentElement.classList.contains("js"),
+  consentPending: document.documentElement.classList.contains("consent-pending"),
   sections: document.querySelectorAll("main section").length,
   h1: document.querySelectorAll("h1").length,
   ctaLines: Number(document.querySelector(".contact-cta h2").dataset.revealLines),
@@ -103,6 +104,7 @@ const desktop = await page.evaluate(() => ({
 }));
 
 assert(desktop.js, "JS enhancement class is active");
+assert(desktop.consentPending, "An undecided visit reserves the consent-safe hero position before the prompt appears");
 assert(desktop.sections === 8, "Hero and all seven content sections exist in the main landmark");
 assert(desktop.h1 === 1, "Exactly one H1 exists");
 assert(desktop.ctaLines === 2, "Desktop CTA keeps the target two-line split");
@@ -181,15 +183,27 @@ await page.evaluate(() => {
 });
 await cookieBanner.locator("[data-consent-reject]").click();
 await cookieBanner.waitFor({ state: "hidden" });
+await page.waitForTimeout(450);
 const rejectedPrivacy = await page.evaluate(() => ({
   consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
   iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
   analytics: Boolean(document.querySelector("script[data-hul-analytics]")),
+  consentPending: document.documentElement.classList.contains("consent-pending"),
+  heroContentBottom: parseFloat(getComputedStyle(document.querySelector(".hero__content")).bottom),
   heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
 }));
 assert(rejectedPrivacy.consent?.version === 1 && !rejectedPrivacy.consent.analytics && !rejectedPrivacy.consent.maps, "Rejecting optional services stores an explicit category-level decision");
 assert(!rejectedPrivacy.iframe && !rejectedPrivacy.analytics, "Rejecting optional services leaves Google resources unloaded");
-assert(Math.abs(rejectedPrivacy.heroActionsBottom - desktop.heroActionsBottom) <= 0.5, "Saving consent leaves hero content at the same fixed height");
+assert(!rejectedPrivacy.consentPending && rejectedPrivacy.heroContentBottom === 112 && rejectedPrivacy.heroActionsBottom > desktop.heroActionsBottom + 21, "Hiding consent moves hero once to its fixed normal position");
+await page.reload({ waitUntil: "networkidle" });
+await page.evaluate(() => document.fonts.ready);
+await page.waitForTimeout(250);
+const storedConsentStart = await page.evaluate(() => ({
+  consentPending: document.documentElement.classList.contains("consent-pending"),
+  bannerHidden: document.querySelector("[data-cookie-banner]").hidden,
+  heroContentBottom: parseFloat(getComputedStyle(document.querySelector(".hero__content")).bottom),
+}));
+assert(!storedConsentStart.consentPending && storedConsentStart.bannerHidden && storedConsentStart.heroContentBottom === 112, "A saved choice starts directly in the normal hero state without a first-paint jump");
 
 for (let y = 0; y < await page.evaluate(() => document.documentElement.scrollHeight); y += 700) {
   await page.evaluate((top) => scrollTo(0, top), y);
