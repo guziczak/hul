@@ -82,6 +82,15 @@ const desktop = await page.evaluate(() => ({
     background: getComputedStyle(document.querySelector(".header")).backgroundColor,
     blur: getComputedStyle(document.querySelector(".header")).backdropFilter,
   },
+  heroMedia: {
+    decoded: document.querySelector(".hero__media").classList.contains("is-decoded"),
+    currentSrc: document.querySelector("[data-hero-image]").currentSrc,
+    opacity: getComputedStyle(document.querySelector("[data-hero-image]")).opacity,
+    filter: getComputedStyle(document.querySelector("[data-hero-image]")).filter,
+    transform: getComputedStyle(document.querySelector("[data-hero-image]")).transform,
+    pictureDisplay: getComputedStyle(document.querySelector(".hero__media")).display,
+    shade: getComputedStyle(document.querySelector(".hero__shade")).backgroundColor,
+  },
   quickActions: {
     phoneHref: document.querySelector(".quick-action--phone")?.getAttribute("href"),
     topHref: document.querySelector("[data-scroll-top]")?.getAttribute("href"),
@@ -112,6 +121,8 @@ assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section
 assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
+assert(desktop.heroMedia.decoded && desktop.heroMedia.currentSrc.includes(".webp") && desktop.heroMedia.opacity === "1", "The hero reveals a fully decoded modern image rather than streaming partial pixels");
+assert(desktop.heroMedia.filter === "none" && desktop.heroMedia.transform === "none" && desktop.heroMedia.pictureDisplay === "block" && desktop.heroMedia.shade === "rgba(0, 0, 0, 0.35)", "The hero avoids the filtered transformed image layer that clips in mobile WebKit");
 assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "The phone is immediately available while the back-to-top action stays hidden at the page top");
 
 const cookieBanner = page.locator("[data-cookie-banner]");
@@ -343,9 +354,28 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }
   await shortPage.close();
 }
 
-const iphonePage = await context.newPage();
-await iphonePage.setViewportSize({ width: 430, height: 932 });
-await iphonePage.goto(baseUrl, { waitUntil: "networkidle" });
+const iphoneContext = await browser.newContext({
+  viewport: { width: 430, height: 932 },
+  deviceScaleFactor: 3,
+  isMobile: true,
+});
+let releaseHeroResponse;
+const heroResponseGate = new Promise((resolve) => { releaseHeroResponse = resolve; });
+await iphoneContext.route("**/hero-mobile-1280.webp", async (route) => {
+  await heroResponseGate;
+  await route.continue();
+});
+const iphonePage = await iphoneContext.newPage();
+await iphonePage.goto(baseUrl, { waitUntil: "domcontentloaded" });
+const guardedHero = await iphonePage.evaluate(() => ({
+  opacity: getComputedStyle(document.querySelector("[data-hero-image]")).opacity,
+  placeholder: getComputedStyle(document.querySelector(".hero__media")).backgroundImage,
+  currentSrc: document.querySelector("[data-hero-image]").currentSrc,
+}));
+assert(guardedHero.opacity === "0" && guardedHero.placeholder.includes("hero-mobile-placeholder.webp") && guardedHero.currentSrc.includes("hero-mobile-1280.webp"), "A stalled DPR3 hero request shows the complete placeholder instead of a half-painted image");
+releaseHeroResponse();
+await iphonePage.waitForFunction(() => document.querySelector(".hero__media").classList.contains("is-decoded"));
+await iphonePage.waitForTimeout(450);
 const iphoneHero = await iphonePage.evaluate(() => {
   const heroRect = document.querySelector(".hero").getBoundingClientRect();
   const spacerRect = document.querySelector(".hero-spacer").getBoundingClientRect();
@@ -359,6 +389,8 @@ const iphoneHero = await iphonePage.evaluate(() => {
     mediaHeight: mediaRect.height,
     imageHeight: imageRect.height,
     imageBottom: imageRect.bottom,
+    imageOpacity: getComputedStyle(document.querySelector("[data-hero-image]")).opacity,
+    currentSrc: document.querySelector("[data-hero-image]").currentSrc,
   };
 });
 assert(
@@ -367,10 +399,12 @@ assert(
     && Math.abs(iphoneHero.spacerHeight - iphoneHero.viewportHeight) <= 1
     && Math.abs(iphoneHero.mediaHeight - iphoneHero.viewportHeight) <= 1
     && Math.abs(iphoneHero.imageHeight - iphoneHero.viewportHeight) <= 1
-    && Math.abs(iphoneHero.imageBottom - iphoneHero.viewportHeight) <= 1,
+    && Math.abs(iphoneHero.imageBottom - iphoneHero.viewportHeight) <= 1
+    && iphoneHero.imageOpacity === "1"
+    && iphoneHero.currentSrc.includes("hero-mobile-1280.webp"),
   "The mobile hero fills an iPhone 15 Pro Max viewport without a bottom strip",
 );
-await iphonePage.close();
+await iphoneContext.close();
 
 const noJsPage = await browser.newPage({
   javaScriptEnabled: false,
