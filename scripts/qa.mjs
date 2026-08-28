@@ -96,6 +96,8 @@ const desktop = await page.evaluate(() => ({
     topHref: document.querySelector("[data-scroll-top]")?.getAttribute("href"),
     phoneVisible: document.querySelector(".quick-action--phone")?.classList.contains("is-visible"),
     topVisible: document.querySelector("[data-scroll-top]")?.classList.contains("is-visible"),
+    phoneBackground: getComputedStyle(document.querySelector(".quick-action--phone")).backgroundColor,
+    topBackground: getComputedStyle(document.querySelector("[data-scroll-top]")).backgroundColor,
   },
 }));
 
@@ -124,6 +126,7 @@ assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.her
 assert(desktop.heroMedia.decoded && desktop.heroMedia.currentSrc.includes(".webp") && desktop.heroMedia.opacity === "1", "The hero reveals a fully decoded modern image rather than streaming partial pixels");
 assert(desktop.heroMedia.filter === "none" && desktop.heroMedia.transform === "none" && desktop.heroMedia.pictureDisplay === "block" && desktop.heroMedia.shade === "rgba(0, 0, 0, 0.35)", "The hero avoids the filtered transformed image layer that clips in mobile WebKit");
 assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "The phone is immediately available while the back-to-top action stays hidden at the page top");
+assert(desktop.quickActions.phoneBackground === "rgba(50, 38, 31, 0.97)" && desktop.quickActions.topBackground === "rgba(249, 245, 235, 0.84)", "The permanent phone action is oak while the secondary back-to-top action stays milky");
 
 const cookieBanner = page.locator("[data-cookie-banner]");
 await cookieBanner.waitFor({ state: "visible" });
@@ -236,10 +239,13 @@ const footerQuickActions = await page.evaluate(() => {
   const footer = document.querySelector(".footer").getBoundingClientRect();
   return {
     gap: footer.top - phone.bottom,
-    lightVariant: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--on-dark"),
+    darkSurface: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--on-dark"),
+    phoneBackground: getComputedStyle(document.querySelector(".quick-action--phone")).backgroundColor,
+    phoneColor: getComputedStyle(document.querySelector(".quick-action--phone")).color,
   };
 });
-assert(footerQuickActions.gap >= 12 && footerQuickActions.lightVariant, "Floating actions clear the footer logo and invert over the dark ending");
+assert(footerQuickActions.gap >= 12 && footerQuickActions.darkSurface, "Floating actions clear the footer logo and detect the dark ending");
+assert(footerQuickActions.phoneBackground === "rgba(50, 38, 31, 0.97)" && footerQuickActions.phoneColor === "rgb(249, 245, 235)", "The phone action remains oak and legible over the dark ending");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, 0);

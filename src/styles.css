@@ -1317,8 +1317,9 @@ html:not(.js) [data-open-privacy] {
 }
 
 .quick-action--phone {
-  border-color: rgba(249, 245, 235, 0.16);
-  background: rgba(22, 35, 27, 0.96);
+  border-color: rgba(249, 245, 235, 0.2);
+  background: rgba(50, 38, 31, 0.97);
+  box-shadow: 0 12px 30px rgba(31, 22, 17, 0.28);
   color: var(--paper);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
@@ -1341,9 +1342,10 @@ html:not(.js) [data-open-privacy] {
 }
 
 .quick-actions--on-dark .quick-action--phone {
-  border-color: rgba(22, 35, 27, 0.16);
-  background: rgba(249, 245, 235, 0.94);
-  color: var(--ink);
+  border-color: rgba(249, 245, 235, 0.36);
+  background: rgba(50, 38, 31, 0.97);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  color: var(--paper);
 }
 
 .quick-action__tooltip {
