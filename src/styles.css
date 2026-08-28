@@ -99,6 +99,10 @@ p {
   margin: 0;
 }
 
+[data-reveal-chars] {
+  font-kerning: none;
+}
+
 img,
 video {
   display: block;
@@ -140,16 +144,12 @@ main {
   transform: none;
 }
 
-.split-measure-word {
-  display: inline-block;
+.split-word {
   white-space: nowrap;
 }
 
-.split-line {
-  display: block;
-}
-
-.js .reveal--chars .split-line {
+.js .reveal--chars .split-char {
+  display: inline-block;
   opacity: 0.001;
   transform: translateY(50px);
   transition:
@@ -157,7 +157,7 @@ main {
     transform 600ms cubic-bezier(0.12, 0.23, 0.5, 1) var(--line-delay);
 }
 
-.js .reveal--chars.is-visible .split-line {
+.js .reveal--chars.is-visible .split-char {
   opacity: 1;
   transform: translateY(0);
 }
@@ -506,7 +506,7 @@ main {
   min-height: 720px;
 }
 
-main {
+.page-content {
   position: relative;
   z-index: 2;
   border-radius: 8px 8px 0 0;
@@ -620,6 +620,7 @@ main {
 
 .experts__grid > .reveal {
   height: 100%;
+  min-height: 0;
   opacity: 1;
   transform: none;
   transition: none;
@@ -627,8 +628,11 @@ main {
 
 .expert-card {
   position: relative;
+  display: flex;
   height: 100%;
+  flex-direction: column;
   padding: 40px;
+  overflow: hidden;
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;
@@ -650,13 +654,10 @@ main {
 }
 
 .expert-card__person {
-  position: absolute;
-  right: 120px;
-  bottom: 49px;
-  left: 40px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: auto;
 }
 
 .expert-card__person strong {
@@ -1008,6 +1009,11 @@ html:not(.js) .faq-item__icon {
 
   .experts__grid > .reveal {
     height: auto;
+    min-height: 0;
+    aspect-ratio: 35 / 47;
+  }
+
+  .experts__grid > .expert-photo {
     aspect-ratio: 0.73389 / 1;
   }
 
@@ -1273,7 +1279,7 @@ html:not(.js) .faq-item__icon {
   }
 
   .expert-card__person {
-    bottom: 40px;
+    margin-top: auto;
   }
 
   .expert-card__avatar {
@@ -1602,9 +1608,7 @@ html:not(.js) .faq-item__icon {
   }
 
   .expert-card__person {
-    right: 108px;
-    bottom: 40px;
-    left: 40px;
+    margin-top: auto;
   }
 
   .expert-card__avatar {
@@ -1754,6 +1758,18 @@ html:not(.js) .faq-item__icon {
   }
 }
 
+@media (max-height: 639px) {
+  .hero,
+  .hero-spacer {
+    height: 100svh;
+    min-height: 0;
+  }
+
+  .hero__content {
+    bottom: 24px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 
@@ -1767,6 +1783,11 @@ html:not(.js) .faq-item__icon {
   }
 
   .reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .js .reveal--chars .split-char {
     opacity: 1;
     transform: none;
   }

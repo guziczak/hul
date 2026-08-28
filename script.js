@@ -68,50 +68,53 @@ setMenu(false);
 
 function splitHeading(heading) {
   const text = heading.dataset.revealText || heading.textContent.trim();
-  const words = text.split(/\s+/);
-  const lineGroups = [];
-  let lastTop = null;
   const linesBreakpoint = Number(heading.dataset.linesBreakpoint || 809);
   const preferredLines = window.innerWidth <= linesBreakpoint
     ? heading.dataset.linesMobile
     : heading.dataset.linesDesktop;
+  const lines = preferredLines
+    ? preferredLines.split("|").map((line) => line.trim().split(/\s+/))
+    : [text.split(/\s+/)];
 
   heading.dataset.revealText = text;
   heading.setAttribute("aria-label", text);
   heading.textContent = "";
 
-  if (preferredLines) {
-    preferredLines.split("|").forEach((line) => lineGroups.push(line.trim().split(/\s+/)));
-  } else {
-    words.forEach((word, wordIndex) => {
+  lines.forEach((lineWords, lineIndex) => {
+    lineWords.forEach((word, wordIndex) => {
       const wordElement = document.createElement("span");
-      wordElement.className = "split-measure-word";
+      wordElement.className = "split-word";
       wordElement.setAttribute("aria-hidden", "true");
-      wordElement.textContent = word;
+      Array.from(word).forEach((character) => {
+        const characterElement = document.createElement("span");
+        characterElement.className = "split-char";
+        characterElement.textContent = character;
+        wordElement.append(characterElement);
+      });
       heading.append(wordElement);
-      if (wordIndex < words.length - 1) heading.append(document.createTextNode(" "));
+      if (wordIndex < lineWords.length - 1) heading.append(document.createTextNode(" "));
     });
 
-    heading.querySelectorAll(".split-measure-word").forEach((wordElement) => {
-      const top = Math.round(wordElement.offsetTop);
-      if (lastTop === null || Math.abs(top - lastTop) > 2) {
-        lineGroups.push([]);
-        lastTop = top;
-      }
-      lineGroups.at(-1).push(wordElement.textContent);
-    });
-  }
-
-  heading.textContent = "";
-  lineGroups.forEach((lineWords, lineIndex) => {
-    const line = document.createElement("span");
-    line.className = "split-line";
-    line.setAttribute("aria-hidden", "true");
-    line.style.setProperty("--line-delay", `${lineIndex * 100}ms`);
-    line.textContent = lineWords.join(" ");
-    heading.append(line);
+    if (lineIndex < lines.length - 1) {
+      heading.append(document.createTextNode(" "));
+      const lineAnchor = document.createElement("span");
+      lineAnchor.className = "split-word split-word--anchor";
+      lineAnchor.setAttribute("aria-hidden", "true");
+      heading.append(lineAnchor, document.createElement("br"));
+    }
   });
 
+  const lineTops = [];
+  heading.querySelectorAll(".split-word:not(.split-word--anchor)").forEach((wordElement) => {
+    const top = Math.round(wordElement.getBoundingClientRect().top);
+    let lineIndex = lineTops.findIndex((lineTop) => Math.abs(lineTop - top) <= 2);
+    if (lineIndex === -1) {
+      lineIndex = lineTops.length;
+      lineTops.push(top);
+    }
+    wordElement.style.setProperty("--line-delay", `${lineIndex * 100}ms`);
+  });
+  heading.dataset.revealLines = String(lineTops.length);
   heading.closest(".reveal")?.classList.add("reveal--chars");
 }
 
@@ -129,7 +132,13 @@ document.fonts.ready.then(() => {
     { threshold: 0 },
   );
 
-  document.querySelectorAll(".reveal").forEach((element) => revealObserver.observe(element));
+  document.querySelectorAll(".reveal").forEach((element) => {
+    if (element.closest(".hero")) {
+      requestAnimationFrame(() => element.classList.add("is-visible"));
+      return;
+    }
+    revealObserver.observe(element);
+  });
   window.clearTimeout(window.__hulRevealFallback);
 
   let headingResizeTimer = 0;
@@ -146,7 +155,11 @@ document.fonts.ready.then(() => {
 document.querySelectorAll(".faq-item__question").forEach((button) => {
   const item = button.closest(".faq-item");
   const answer = document.getElementById(button.getAttribute("aria-controls"));
-  answer?.setAttribute("aria-hidden", String(!item.classList.contains("faq-item--open")));
+  const initiallyOpen = item.classList.contains("faq-item--open");
+  button.disabled = false;
+  button.removeAttribute("tabindex");
+  button.setAttribute("aria-expanded", String(initiallyOpen));
+  answer?.setAttribute("aria-hidden", String(!initiallyOpen));
 
   button.addEventListener("click", () => {
     const open = item.classList.toggle("faq-item--open");
@@ -156,7 +169,8 @@ document.querySelectorAll(".faq-item__question").forEach((button) => {
 });
 
 const ctaVideo = document.querySelector(".contact-cta__video");
-if (ctaVideo) {
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+if (ctaVideo && !reducedMotion.matches) {
   const videoObserver = new IntersectionObserver(
     ([entry]) => {
       if (entry.isIntersecting) ctaVideo.play().catch(() => {});
@@ -167,6 +181,7 @@ if (ctaVideo) {
   videoObserver.observe(ctaVideo);
 }
 
-if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+if (reducedMotion.matches) {
+  ctaVideo?.pause();
   root.classList.add("reduced-motion");
 }

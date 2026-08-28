@@ -10,6 +10,6 @@
   },
   "devDependencies": {
     "playwright-core": "1.55.0",
-    "vite": "latest"
+    "vite": "8.2.2"
   }
 }
