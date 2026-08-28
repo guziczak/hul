@@ -1232,6 +1232,134 @@ html:not(.js) [data-open-privacy] {
   text-decoration-color: currentColor;
 }
 
+/* Floating contact and back-to-top controls */
+.quick-actions {
+  position: fixed;
+  z-index: 30;
+  right: 20px;
+  bottom: var(--quick-actions-bottom, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  transition:
+    bottom 420ms var(--ease-out),
+    opacity 260ms ease,
+    visibility 0s linear 0s;
+}
+
+.quick-action {
+  position: relative;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(22, 35, 27, 0.16);
+  border-radius: 8px;
+  place-items: center;
+  box-shadow: 0 10px 28px rgba(22, 35, 27, 0.14);
+  pointer-events: auto;
+  transition:
+    opacity 320ms var(--ease-out),
+    transform 420ms var(--ease-out),
+    visibility 0s linear 0s,
+    background-color 320ms var(--ease-out),
+    border-color 320ms var(--ease-out),
+    color 320ms var(--ease-out);
+}
+
+.quick-action svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.quick-action:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.quick-action--top {
+  background: rgba(249, 245, 235, 0.84);
+  color: var(--ink);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.quick-action--phone {
+  border-color: rgba(249, 245, 235, 0.16);
+  background: rgba(22, 35, 27, 0.96);
+  color: var(--paper);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.js .quick-action {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.96);
+  transition-delay: 0s, 0s, 320ms, 0s, 0s, 0s;
+}
+
+.js .quick-action.is-visible {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+
+.quick-actions--on-dark .quick-action--phone {
+  border-color: rgba(22, 35, 27, 0.16);
+  background: rgba(249, 245, 235, 0.94);
+  color: var(--ink);
+}
+
+.quick-action__tooltip {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 9px);
+  width: max-content;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(5px, -50%);
+  transition: opacity 200ms ease, transform 260ms var(--ease-out);
+}
+
+@media (hover: hover) {
+  .js .quick-action.is-visible:hover,
+  .js .quick-action.is-visible:focus-visible,
+  html:not(.js) .quick-action:hover,
+  html:not(.js) .quick-action:focus-visible {
+    transform: translateY(-2px) scale(1);
+  }
+
+  .quick-action:hover .quick-action__tooltip,
+  .quick-action:focus-visible .quick-action__tooltip {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+body.menu-open .quick-actions,
+body.privacy-open .quick-actions {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0s, 0s, 260ms;
+}
+
 /* Privacy consent */
 .cookie-banner {
   position: fixed;
@@ -2403,6 +2531,15 @@ body.privacy-open {
   .footer__meta > p {
     font-size: 12px;
     line-height: 18px;
+  }
+
+  .quick-actions {
+    right: 12px;
+    bottom: var(--quick-actions-bottom, 16px);
+  }
+
+  .quick-action__tooltip {
+    display: none;
   }
 
   .cookie-banner {

@@ -6,6 +6,9 @@ const mobileLinks = document.querySelector(".header__mobile-links");
 
 function setMenu(open) {
   header.classList.toggle("header--open", open);
+  document.body.classList.toggle("menu-open", open);
+  const quickActionsElement = document.querySelector("[data-quick-actions]");
+  if (quickActionsElement) quickActionsElement.inert = open || document.body.classList.contains("privacy-open");
   menuToggle.setAttribute("aria-expanded", String(open));
   menuToggle.setAttribute("aria-label", open ? "Zamknij menu" : "Otwórz menu");
   mobileLinks.setAttribute("aria-hidden", String(!open));
@@ -186,6 +189,63 @@ if (reducedMotion.matches) {
   root.classList.add("reduced-motion");
 }
 
+/* Floating phone and back-to-top controls */
+const quickActions = document.querySelector("[data-quick-actions]");
+const quickPhone = quickActions?.querySelector(".quick-action--phone");
+const quickTop = quickActions?.querySelector("[data-scroll-top]");
+let quickActionsFrame = 0;
+
+function updateQuickActions() {
+  if (!quickActions || !hero) return;
+  const heroHeight = hero.getBoundingClientRect().height;
+  quickPhone?.classList.toggle("is-visible", window.scrollY >= heroHeight * 0.9);
+  quickTop?.classList.toggle("is-visible", window.scrollY >= Math.max(heroHeight * 1.25, window.innerHeight * 1.5));
+}
+
+function requestQuickActionsUpdate() {
+  if (quickActionsFrame) return;
+  quickActionsFrame = requestAnimationFrame(() => {
+    updateQuickActions();
+    syncQuickActionsOffset();
+    quickActionsFrame = 0;
+  });
+}
+
+function syncQuickActionsOffset() {
+  if (!quickActions) return;
+  const mobile = window.innerWidth <= 809;
+  const normalBottom = mobile ? 16 : 20;
+  const banner = document.querySelector("[data-cookie-banner]");
+  const bannerOffset = banner && !banner.hidden
+    ? banner.offsetHeight + (mobile ? 20 : 32)
+    : normalBottom;
+  const footer = document.querySelector(".footer");
+  const footerRect = footer?.getBoundingClientRect();
+  const visibleFooterHeight = footerRect
+    ? Math.max(0, Math.min(footerRect.height, window.innerHeight - footerRect.top))
+    : 0;
+  const footerOffset = normalBottom + visibleFooterHeight;
+  quickActions.style.setProperty("--quick-actions-bottom", `${Math.max(normalBottom, bannerOffset, footerOffset)}px`);
+}
+
+window.addEventListener("scroll", requestQuickActionsUpdate, { passive: true });
+window.addEventListener("resize", () => {
+  requestQuickActionsUpdate();
+  syncQuickActionsOffset();
+}, { passive: true });
+
+const contactCta = document.querySelector(".contact-cta");
+if (quickActions && contactCta) {
+  const darkSurfaceObserver = new IntersectionObserver(
+    ([entry]) => quickActions.classList.toggle("quick-actions--on-dark", entry.isIntersecting),
+    { threshold: 0.08 },
+  );
+  darkSurfaceObserver.observe(contactCta);
+}
+
+updateQuickActions();
+syncQuickActionsOffset();
+
 /* Privacy consent, Google Analytics and the interactive contact map */
 const PRIVACY_STORAGE_KEY = "hul:privacy-consent:v1";
 const PRIVACY_VERSION = 1;
@@ -202,6 +262,11 @@ const mapPreview = contactMap?.querySelector("[data-map-preview]");
 const mapStatus = contactMap?.querySelector("[data-map-status]");
 const mapEnableButton = contactMap?.querySelector("[data-enable-map]");
 const footerPrivacyButton = document.querySelector("[data-open-privacy]");
+
+if (cookieBanner && typeof ResizeObserver === "function") {
+  const cookieBannerResizeObserver = new ResizeObserver(syncQuickActionsOffset);
+  cookieBannerResizeObserver.observe(cookieBanner);
+}
 
 let bannerTimer = 0;
 let dialogReturnFocus = null;
@@ -253,6 +318,7 @@ function showCookieBanner() {
   cookieBanner.hidden = false;
   cookieBanner.inert = false;
   cookieBanner.setAttribute("aria-hidden", "false");
+  syncQuickActionsOffset();
   requestAnimationFrame(() => cookieBanner.classList.add("is-visible"));
 }
 
@@ -265,6 +331,7 @@ function hideCookieBanner() {
   cookieBanner.classList.remove("is-visible");
   window.setTimeout(() => {
     cookieBanner.hidden = true;
+    syncQuickActionsOffset();
   }, reducedMotion.matches ? 0 : 430);
 }
 
@@ -279,6 +346,7 @@ function openPrivacyDialog({ focusCategory, trigger } = {}) {
   if (typeof privacyDialog.showModal === "function") privacyDialog.showModal();
   else privacyDialog.setAttribute("open", "");
   document.body.classList.add("privacy-open");
+  if (quickActions) quickActions.inert = true;
 
   requestAnimationFrame(() => {
     const target = focusCategory === "maps"
@@ -297,6 +365,7 @@ function closePrivacyDialog({ restoreFocus = true } = {}) {
   if (typeof privacyDialog.close === "function") privacyDialog.close();
   else privacyDialog.removeAttribute("open");
   document.body.classList.remove("privacy-open");
+  if (quickActions) quickActions.inert = document.body.classList.contains("menu-open");
   if (focusTarget instanceof HTMLElement && focusTarget.isConnected && !focusTarget.closest("[inert]")) {
     focusTarget.focus({ preventScroll: true });
   }
@@ -430,10 +499,12 @@ privacyDialog?.addEventListener("click", (event) => {
 privacyDialog?.addEventListener("cancel", () => {
   pendingMapRequest = false;
   document.body.classList.remove("privacy-open");
+  if (quickActions) quickActions.inert = document.body.classList.contains("menu-open");
 });
 
 privacyDialog?.addEventListener("close", () => {
   document.body.classList.remove("privacy-open");
+  if (quickActions) quickActions.inert = document.body.classList.contains("menu-open");
   if (dialogReturnFocus instanceof HTMLElement && dialogReturnFocus.isConnected && !dialogReturnFocus.closest("[inert]")) {
     dialogReturnFocus.focus({ preventScroll: true });
   }

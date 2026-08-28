@@ -78,6 +78,12 @@ const desktop = await page.evaluate(() => ({
     background: getComputedStyle(button).backgroundColor,
     blur: getComputedStyle(button).backdropFilter,
   })),
+  quickActions: {
+    phoneHref: document.querySelector(".quick-action--phone")?.getAttribute("href"),
+    topHref: document.querySelector("[data-scroll-top]")?.getAttribute("href"),
+    phoneVisible: document.querySelector(".quick-action--phone")?.classList.contains("is-visible"),
+    topVisible: document.querySelector("[data-scroll-top]")?.classList.contains("is-visible"),
+  },
 }));
 
 assert(desktop.js, "JS enhancement class is active");
@@ -101,6 +107,7 @@ assert(!desktop.privacy.analyticsScript && !desktop.privacy.interactiveMap, "Opt
 assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section starts with a local map preview");
 assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
+assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && !desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "Floating actions have correct targets and stay hidden at the page top");
 
 const cookieBanner = page.locator("[data-cookie-banner]");
 await cookieBanner.waitFor({ state: "visible" });
@@ -167,6 +174,42 @@ await page.waitForFunction(() => Math.abs(document.querySelector(".visit").getBo
 const contactAnchorTop = await page.locator(".visit").evaluate((section) => section.getBoundingClientRect().top);
 assert(Math.abs(contactAnchorTop - 64) <= 2, `The Contact anchor clears the fixed 64px header (${contactAnchorTop}px)`);
 
+const visibleQuickActions = await page.evaluate(() => ({
+  phone: document.querySelector(".quick-action--phone").classList.contains("is-visible"),
+  top: document.querySelector("[data-scroll-top]").classList.contains("is-visible"),
+}));
+assert(visibleQuickActions.phone && visibleQuickActions.top, "Phone and back-to-top actions appear only after meaningful scrolling");
+await page.locator("[data-scroll-top]").click();
+await page.waitForFunction(() => window.scrollY <= 1);
+assert(await page.evaluate(() => location.hash === "#top"), "The floating arrow returns to the document top");
+
+await page.locator('.header__desktop-links a[href="#kontakt"]').click();
+await page.waitForFunction(() => Math.abs(document.querySelector(".visit").getBoundingClientRect().top - 64) <= 2);
+await page.locator(".header__top > .logo").click();
+await page.waitForFunction(() => window.scrollY <= 1);
+assert(await page.evaluate(() => window.scrollY <= 1 && location.hash === "#top"), "Clicking the upper-left HUL logo returns to the document top");
+
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, document.documentElement.scrollHeight);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await page.waitForTimeout(620);
+const footerQuickActions = await page.evaluate(() => {
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  const footer = document.querySelector(".footer").getBoundingClientRect();
+  return {
+    gap: footer.top - phone.bottom,
+    lightVariant: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--on-dark"),
+  };
+});
+assert(footerQuickActions.gap >= 12 && footerQuickActions.lightVariant, "Floating actions clear the footer logo and invert over the dark ending");
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, 0);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+
 await page.setViewportSize({ width: 390, height: 844 });
 await page.evaluate(() => scrollTo(0, 0));
 await page.waitForTimeout(350);
@@ -191,9 +234,12 @@ mobileState = await page.evaluate(() => ({
   expanded: document.querySelector(".menu-toggle").getAttribute("aria-expanded"),
   inert: document.querySelector(".header__mobile-links").inert,
   hidden: document.querySelector(".header__mobile-links").getAttribute("aria-hidden"),
+  bodyMenuOpen: document.body.classList.contains("menu-open"),
+  quickActionsInert: document.querySelector("[data-quick-actions]").inert,
 }));
 assert(mobileState.height === 208 && mobileState.open, "Mobile menu opens to the target 208px height");
 assert(mobileState.expanded === "true" && !mobileState.inert && mobileState.hidden === "false", "Open mobile navigation is exposed accessibly");
+assert(mobileState.bodyMenuOpen && mobileState.quickActionsInert, "Open mobile navigation suppresses floating actions");
 await page.keyboard.press("Escape");
 await page.waitForTimeout(100);
 mobileState = await page.evaluate(() => ({
@@ -288,6 +334,11 @@ const noJs = await noJsPage.evaluate(() => ({
   content: document.body.innerText.includes("Działamy wszędzie tam"),
   privacyHidden: document.querySelector("[data-cookie-banner]")?.hidden,
   privacyButtonDisplay: getComputedStyle(document.querySelector("[data-open-privacy]")).display,
+  quickActions: {
+    phoneHref: document.querySelector(".quick-action--phone")?.getAttribute("href"),
+    topHref: document.querySelector("[data-scroll-top]")?.getAttribute("href"),
+    visible: [...document.querySelectorAll(".quick-action")].every((action) => getComputedStyle(action).visibility === "visible"),
+  },
   map: {
     previewVisible: document.querySelector("[data-map-preview] img")?.getBoundingClientRect().height > 0,
     enableButtonDisplay: getComputedStyle(document.querySelector("[data-enable-map]")).display,
@@ -302,6 +353,7 @@ assert(noJs.answers.every((height) => height > 0) && noJs.content, "All FAQ cont
 assert(noJs.faqButtons.every((button) => button.expanded === "true" && button.tabIndex === -1 && button.disabled), "No-JS FAQ exposes expanded content without dead controls");
 assert(noJs.privacyHidden && noJs.privacyButtonDisplay === "none", "No-JS mode does not expose unusable consent controls");
 assert(noJs.map.previewVisible && noJs.map.enableButtonDisplay === "none" && noJs.map.externalLink && !noJs.map.iframe, "No-JS mode keeps the local map and a working external directions link");
+assert(noJs.quickActions.visible && noJs.quickActions.phoneHref === "tel:+48717810307" && noJs.quickActions.topHref === "#top", "No-JS mode keeps both native floating links usable");
 
 await noJsPage.close();
 
@@ -323,12 +375,16 @@ await mapPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
 await mapPage.locator("[data-contact-map]").scrollIntoViewIfNeeded();
 await mapPage.locator("[data-enable-map]").click();
 await mapPage.locator("[data-privacy-dialog]").waitFor({ state: "visible" });
+await mapPage.waitForTimeout(300);
 let mapConsentState = await mapPage.evaluate(() => ({
   focused: document.activeElement === document.querySelector("[data-consent-maps]"),
   checked: document.querySelector("[data-consent-maps]").checked,
   iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
+  quickActionsHidden: getComputedStyle(document.querySelector("[data-quick-actions]")).visibility === "hidden",
+  quickActionsInert: document.querySelector("[data-quick-actions]").inert,
 }));
 assert(mapConsentState.focused && !mapConsentState.checked && !mapConsentState.iframe, "Requesting the interactive map opens settings on the unselected Maps category");
+assert(mapConsentState.quickActionsHidden && mapConsentState.quickActionsInert, "The privacy dialog hides floating actions from view and focus");
 await mapPage.keyboard.press("Space");
 await mapPage.locator("[data-consent-save]").click();
 await mapPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
@@ -374,14 +430,27 @@ await acceptContext.route("https://maps.google.com/**", (route) => route.fulfill
 const acceptPage = await acceptContext.newPage();
 await acceptPage.goto(baseUrl, { waitUntil: "networkidle" });
 await acceptPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+await acceptPage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, 2000);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await acceptPage.waitForFunction(() => document.querySelector("[data-scroll-top]").classList.contains("is-visible"));
+await acceptPage.waitForTimeout(520);
 const mobileBannerLayout = await acceptPage.evaluate(() => ({
   overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  bannerTop: document.querySelector("[data-cookie-banner]").getBoundingClientRect().top,
   actions: [...document.querySelectorAll("[data-cookie-banner] button")].map((button) => {
     const rect = button.getBoundingClientRect();
     return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
   }),
+  quickActions: [...document.querySelectorAll(".quick-action.is-visible")].map((action) => {
+    const rect = action.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+  }),
 }));
 assert(mobileBannerLayout.overflow === 0 && mobileBannerLayout.actions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= 568), "The complete consent prompt stays reachable at 320px");
+assert(mobileBannerLayout.quickActions.length === 2 && mobileBannerLayout.quickActions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= mobileBannerLayout.bannerTop - 8), "Floating actions move above the mobile consent prompt without overlap");
 await acceptPage.locator("[data-consent-accept]").click();
 await acceptPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
 const acceptedPrivacy = await acceptPage.evaluate(() => ({
