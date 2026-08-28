@@ -331,9 +331,13 @@ function syncFloatingUiOffsets() {
         const buttonRect = button.getBoundingClientRect();
         return buttonRect.right > phoneRect.left - 12 && buttonRect.left < phoneRect.right + 12;
       });
-      if (horizontalCollision) {
-        const heroActionsTargetBottom = heroRect.bottom - heroContentBottom;
-        const heroActionsTargetTop = heroActionsTargetBottom - heroActions.offsetHeight;
+      const heroActionsTargetBottom = heroRect.bottom - heroContentBottom;
+      const heroActionsTargetTop = heroActionsTargetBottom - heroActions.offsetHeight;
+      const phoneTargetBottom = window.innerHeight - requestedQuickActionsBottom;
+      const phoneTargetTop = phoneTargetBottom - phoneAction.offsetHeight;
+      const verticalCollision = heroActionsTargetBottom > phoneTargetTop - 12
+        && heroActionsTargetTop < phoneTargetBottom + 12;
+      if (horizontalCollision && verticalCollision) {
         requestedQuickActionsBottom = Math.max(
           requestedQuickActionsBottom,
           window.innerHeight - heroActionsTargetTop + 12,
