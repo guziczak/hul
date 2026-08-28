@@ -29,7 +29,21 @@
       {
         "@context": "https://schema.org",
         "@type": "HomeAndConstructionBusiness",
+        "@id": "https://guziczak.github.io/hul/#business",
         "name": "Hul",
+        "url": "https://guziczak.github.io/hul/",
+        "image": "https://guziczak.github.io/hul/public/images/hero-desktop.jpg",
+        "telephone": "+48 71 781 03 07",
+        "email": "domar@kuchniezdrewna.pl",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "ul. Braniborska 14, Galeria Wnętrz DOMAR, poziom 1",
+          "postalCode": "53-680",
+          "addressLocality": "Wrocław",
+          "addressCountry": "PL"
+        },
+        "hasMap": "https://www.google.com/maps/search/?api=1&query=Galeria+Wn%C4%99trz+DOMAR%2C+Braniborska+14%2C+53-680+Wroc%C5%82aw",
+        "sameAs": ["https://hul.com.pl/"],
         "foundingDate": "1995",
         "description": "Projektowanie i wykonywanie kuchni na wymiar z litego drewna.",
         "areaServed": ["Polska", "Europa"]
@@ -37,29 +51,30 @@
     </script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Przejdź do treści</a>
     <nav class="header" aria-label="Główna nawigacja">
       <div class="header__inner">
         <div class="header__top">
           <button class="menu-toggle" type="button" aria-expanded="false" aria-label="Otwórz menu"><span></span><span></span><span></span></button>
           <a class="logo" href="#top" aria-label="Hul — strona główna">HUL</a>
           <div class="header__desktop-links">
-            <a href="#realizacje">Realizacje</a><a href="#kontakt">Kontakt</a><a href="#blog">Blog</a>
+            <a href="#realizacje">Realizacje</a><a href="#kontakt">Kontakt</a><a href="#o-nas">O nas</a>
           </div>
           <a class="motion-button motion-button--glass motion-button--compact" href="#kontakt">
             <span class="motion-button__track" aria-hidden="true"><span>Porozmawiajmy</span><span>Porozmawiajmy</span></span><span class="sr-only">Porozmawiajmy</span>
           </a>
         </div>
         <div class="header__mobile-links">
-          <a href="#realizacje">Realizacje</a><a href="#kontakt">Kontakt</a><a href="#blog">Blog</a>
+          <a href="#realizacje">Realizacje</a><a href="#kontakt">Kontakt</a><a href="#o-nas">O nas</a>
         </div>
       </div>
     </nav>
 
-    <main>
+    <main id="main-content" tabindex="-1">
       <section class="hero" id="top" aria-label="Hul — kuchnie z drewna na wymiar">
       <picture class="hero__media">
-        <source media="(max-width: 809px)" srcset="./public/images/hero-mobile-480.jpg 480w, ./public/images/hero-mobile-768.jpg 768w, ./public/images/hero-mobile.jpg 1280w" sizes="100vw" />
-        <img src="./public/images/hero-desktop.jpg" srcset="./public/images/hero-desktop-960.jpg 960w, ./public/images/hero-desktop-1440.jpg 1440w, ./public/images/hero-desktop.jpg 1920w" sizes="100vw" alt="Kuchnia z jasnego, litego drewna" fetchpriority="high" />
+        <source media="(max-width: 809px)" srcset="./public/images/hero-mobile-480.jpg 480w, ./public/images/hero-mobile-768.jpg 768w, ./public/images/hero-mobile.jpg 1280w" sizes="100vw" width="1280" height="1920" />
+        <img src="./public/images/hero-desktop.jpg" srcset="./public/images/hero-desktop-960.jpg 960w, ./public/images/hero-desktop-1440.jpg 1440w, ./public/images/hero-desktop.jpg 1920w" sizes="100vw" width="1920" height="1280" alt="Kuchnia z jasnego, litego drewna" fetchpriority="high" />
       </picture>
       <div class="hero__shade" aria-hidden="true"></div>
 
@@ -82,8 +97,8 @@
           <p>Wierzymy, że zdrowy dom powstaje z naturalnych materiałów, które są ponadczasowe i z biegiem lat nabierają charakteru. Dlatego jako manufaktura od ponad 30 lat projektujemy i realizujemy kuchnie na wymiar w całości wykonane z litego drewna.</p>
         </div>
         <div class="stories__gallery">
-          <div class="image-frame image-frame--wide"><img src="./public/images/kitchen-wide.jpg" srcset="./public/images/kitchen-wide-480.jpg 480w, ./public/images/kitchen-wide-768.jpg 768w, ./public/images/kitchen-wide-1280.jpg 1280w, ./public/images/kitchen-wide.jpg 1920w" sizes="(max-width: 809px) calc(100vw - 32px), (max-width: 1663px) 66vw, 1056px" alt="Jasna kuchnia Hul z drewnianą wyspą" loading="lazy" /></div>
-          <div class="image-frame image-frame--detail"><img src="./public/images/kitchen-detail.jpg" srcset="./public/images/kitchen-detail-480.jpg 480w, ./public/images/kitchen-detail-768.jpg 768w, ./public/images/kitchen-detail-1280.jpg 1280w" sizes="(max-width: 809px) calc(100vw - 32px), (max-width: 1663px) 33vw, 508px" alt="Drewniane szuflady wykonane na wymiar" loading="lazy" /></div>
+          <div class="image-frame image-frame--wide"><img src="./public/images/kitchen-wide.jpg" srcset="./public/images/kitchen-wide-480.jpg 480w, ./public/images/kitchen-wide-768.jpg 768w, ./public/images/kitchen-wide-1280.jpg 1280w, ./public/images/kitchen-wide.jpg 1920w" sizes="(max-width: 809px) calc(100vw - 32px), (max-width: 1663px) 66vw, 1056px" width="1920" height="1280" alt="Jasna kuchnia Hul z drewnianą wyspą" loading="lazy" /></div>
+          <div class="image-frame image-frame--detail"><img src="./public/images/kitchen-detail.jpg" srcset="./public/images/kitchen-detail-480.jpg 480w, ./public/images/kitchen-detail-768.jpg 768w, ./public/images/kitchen-detail-1280.jpg 1280w" sizes="(max-width: 809px) calc(100vw - 32px), (max-width: 1663px) 33vw, 508px" width="1280" height="1920" alt="Drewniane szuflady wykonane na wymiar" loading="lazy" /></div>
         </div>
       </section>
 
@@ -97,19 +112,19 @@
           <span class="chip">Ludzie Hul</span><h2 data-reveal-chars>Eksperci od drewna</h2>
         </div>
         <div class="experts__grid">
-          <div class="reveal expert-photo"><img src="./public/images/kitchen-blue.jpg" srcset="./public/images/kitchen-blue-480.jpg 480w, ./public/images/kitchen-blue-768.jpg 768w, ./public/images/kitchen-blue-1280.jpg 1280w" sizes="(max-width: 809px) calc(100vw - 32px), (max-width: 1199px) calc(50vw - 35px), (max-width: 1663px) calc(33.33vw - 42px), 513px" alt="Granatowa kuchnia Hul" loading="lazy" /></div>
+          <div class="reveal expert-photo"><img src="./public/images/kitchen-blue.jpg" srcset="./public/images/kitchen-blue-480.jpg 480w, ./public/images/kitchen-blue-768.jpg 768w, ./public/images/kitchen-blue-1280.jpg 1280w" sizes="(max-width: 809px) calc(100vw - 32px), (max-width: 1199px) calc(50vw - 35px), (max-width: 1663px) calc(33.33vw - 42px), 513px" width="1280" height="1920" alt="Granatowa kuchnia Hul" loading="lazy" /></div>
           <div class="reveal" style="--reveal-delay: 70ms">
             <article class="expert-card expert-card--light">
               <p class="expert-card__quote">Jako architekci w Hul dbamy, aby proces projektowania i realizacji kuchni przebiegał w pełnym spokoju. Bierzemy odpowiedzialność za stronę wizualną i użytkową wizji, ale przede wszystkim zapewniamy wsparcie w decyzjach, których wymaga każdy remont.</p>
               <div class="expert-card__person"><strong>Monika Kowalska</strong><span>Architekt wnętrz</span></div>
-              <img class="expert-card__avatar" src="./public/images/portrait-monika.png" alt="" loading="lazy" />
+              <img class="expert-card__avatar" src="./public/images/portrait-monika.png" width="350" height="350" alt="" loading="lazy" />
             </article>
           </div>
           <div class="reveal" style="--reveal-delay: 140ms">
             <article class="expert-card expert-card--dark">
               <p class="expert-card__quote">Doświadczenie naszych stolarzy i nowoczesny park maszynowy to część sukcesu. Fundamentem jest samo drewno, dlatego osobiście doglądam go w suszarni. Ten wielotygodniowy proces decyduje o tym, czy kuchnia przetrwa dekady.</p>
               <div class="expert-card__person"><strong>Jerzy Hul</strong><span>Właściciel</span></div>
-              <img class="expert-card__avatar" src="./public/images/portrait-jerzy.png" alt="" loading="lazy" />
+              <img class="expert-card__avatar" src="./public/images/portrait-jerzy.png" width="408" height="408" alt="" loading="lazy" />
             </article>
           </div>
         </div>
@@ -136,18 +151,110 @@
         </div>
       </section>
 
-        <section class="contact-cta" id="kontakt">
-        <video class="contact-cta__video" muted loop playsinline preload="none" poster="./public/images/footer-landscape.jpg" aria-hidden="true"><source src="./public/images/footer-loop.mp4" type="video/mp4" /></video>
+      <section class="visit" id="kontakt" aria-labelledby="visit-title">
+        <div class="visit__heading">
+          <div class="reveal">
+            <span class="chip">Studio Hul</span>
+            <h2 id="visit-title" data-reveal-chars data-lines-desktop="Spotkajmy się|we Wrocławiu" data-lines-mobile="Spotkajmy się|we Wrocławiu">Spotkajmy się we Wrocławiu</h2>
+          </div>
+          <div class="reveal visit__details" style="--reveal-delay: 80ms">
+            <p class="eyebrow">Galeria Wnętrz DOMAR · poziom 1</p>
+            <address>ul. Braniborska 14<br />53-680 Wrocław</address>
+            <p class="visit__description">Zobacz naturalne materiały z bliska i porozmawiajmy o kuchni dopasowanej do rytmu Twojego domu.</p>
+            <div class="visit__contact-links">
+              <a href="tel:+48717810307">+48 71 781 03 07</a>
+              <a href="mailto:domar@kuchniezdrewna.pl">domar@kuchniezdrewna.pl</a>
+            </div>
+            <a class="motion-button motion-button--dark" href="https://www.google.com/maps/search/?api=1&amp;query=Galeria+Wn%C4%99trz+DOMAR%2C+Braniborska+14%2C+53-680+Wroc%C5%82aw" target="_blank" rel="noopener noreferrer">
+              <span class="motion-button__track" aria-hidden="true"><span>Wyznacz trasę</span><span>Wyznacz trasę</span></span><span class="sr-only">Wyznacz trasę do studia Hul w Google Maps (otwiera nową kartę)</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="reveal visit__map" data-contact-map data-map-url="https://maps.google.com/maps?q=Galeria%20Wn%C4%99trz%20DOMAR%2C%20Braniborska%2014%2C%2053-680%20Wroc%C5%82aw&amp;hl=pl&amp;z=16&amp;output=embed">
+          <div class="map-preview" data-map-preview>
+            <picture>
+              <source media="(max-width: 809px)" srcset="./public/images/map-domar-mobile.jpg" width="768" height="520" />
+              <img src="./public/images/map-domar.jpg" width="1920" height="720" alt="Mapa centrum Wrocławia z zaznaczonym studiem Hul przy ulicy Braniborskiej 14" loading="lazy" />
+            </picture>
+            <span class="map-pin" aria-hidden="true"><span>HUL</span></span>
+            <div class="map-preview__actions">
+              <button class="map-preview__button" type="button" data-enable-map>Włącz interaktywną mapę</button>
+              <a href="https://www.google.com/maps/search/?api=1&amp;query=Galeria+Wn%C4%99trz+DOMAR%2C+Braniborska+14%2C+53-680+Wroc%C5%82aw" target="_blank" rel="noopener noreferrer">Otwórz w Google Maps<span class="sr-only"> (otwiera nową kartę)</span></a>
+            </div>
+            <a class="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a>
+          </div>
+          <p class="sr-only" role="status" aria-live="polite" data-map-status></p>
+        </div>
+      </section>
+
+      <section class="contact-cta">
+        <video class="contact-cta__video" width="1280" height="720" muted loop playsinline preload="none" poster="./public/images/footer-landscape.jpg" aria-hidden="true"><source src="./public/images/footer-loop.mp4" type="video/mp4" /></video>
         <div class="contact-cta__shade" aria-hidden="true"></div>
         <div class="reveal contact-cta__content">
           <h2 data-reveal-chars data-lines-breakpoint="430" data-lines-desktop="Spokój drewna|w Twojej codzienności" data-lines-mobile="Spokój drewna|w Twojej|codzienności">Spokój drewna w Twojej codzienności</h2>
-          <a class="motion-button motion-button--outline" href="mailto:studio@hul.pl"><span class="motion-button__track" aria-hidden="true"><span>Porozmawiajmy o Twoim wnętrzu</span><span>Porozmawiajmy o Twoim wnętrzu</span></span><span class="sr-only">Porozmawiajmy o Twoim wnętrzu</span></a>
+          <a class="motion-button motion-button--outline" href="mailto:domar@kuchniezdrewna.pl"><span class="motion-button__track" aria-hidden="true"><span>Porozmawiajmy o Twoim wnętrzu</span><span>Porozmawiajmy o Twoim wnętrzu</span></span><span class="sr-only">Porozmawiajmy o Twoim wnętrzu</span></a>
         </div>
-        </section>
+      </section>
       </div>
     </main>
 
-    <footer class="footer" id="blog"><p>© Hul™ 1995-2026</p><a class="logo" href="#top" aria-label="Hul — powrót na górę">HUL</a></footer>
+    <footer class="footer">
+      <div class="footer__meta">
+        <p>© Hul™ 1995-2026</p>
+        <button type="button" data-open-privacy>Ustawienia prywatności</button>
+      </div>
+      <a class="logo" href="#top" aria-label="Hul — powrót na górę">HUL</a>
+    </footer>
+
+    <div class="cookie-banner" data-cookie-banner role="region" aria-label="Ustawienia plików cookies" aria-hidden="true" inert hidden>
+      <div class="cookie-banner__copy">
+        <strong>Twoja prywatność</strong>
+        <p>Za Twoją zgodą możemy uruchomić Google Analytics i interaktywną Mapę Google. Niezbędna pamięć lokalna zapisze wyłącznie Twój wybór.</p>
+      </div>
+      <div class="cookie-banner__actions">
+        <button class="consent-button consent-button--primary" type="button" data-consent-accept>Akceptuję wszystkie</button>
+        <button class="consent-button" type="button" data-consent-reject>Odrzucam opcjonalne</button>
+        <button class="consent-link" type="button" data-consent-settings>Ustawienia</button>
+      </div>
+    </div>
+
+    <dialog class="privacy-dialog" data-privacy-dialog aria-labelledby="privacy-title" aria-describedby="privacy-description">
+      <div class="privacy-dialog__panel">
+        <div class="privacy-dialog__header">
+          <div>
+            <span class="eyebrow">Prywatność</span>
+            <h2 id="privacy-title">To Ty wybierasz</h2>
+          </div>
+          <button class="privacy-dialog__close" type="button" aria-label="Zamknij ustawienia prywatności" data-privacy-close>×</button>
+        </div>
+        <p id="privacy-description" class="privacy-dialog__intro">Opcjonalne usługi pozostają wyłączone, dopóki ich nie zaakceptujesz. Wybór możesz później zmienić w stopce.</p>
+
+        <div class="privacy-dialog__options">
+          <div class="privacy-option privacy-option--locked">
+            <span class="privacy-option__toggle is-active" aria-hidden="true"><span></span></span>
+            <span class="privacy-option__copy"><strong>Niezbędne</strong><small>Zapamiętanie ustawień prywatności. Zawsze aktywne.</small></span>
+          </div>
+          <label class="privacy-option">
+            <input class="sr-only" type="checkbox" role="switch" data-consent-analytics />
+            <span class="privacy-option__toggle" aria-hidden="true"><span></span></span>
+            <span class="privacy-option__copy"><strong>Analityka</strong><small>Google Analytics 4 pomaga mierzyć ruch i ulepszać stronę. Uruchamia się wyłącznie po zgodzie.</small></span>
+          </label>
+          <label class="privacy-option">
+            <input class="sr-only" type="checkbox" role="switch" data-consent-maps />
+            <span class="privacy-option__toggle" aria-hidden="true"><span></span></span>
+            <span class="privacy-option__copy"><strong>Mapa Google</strong><small>Ładuje interaktywną mapę. Google może wtedy otrzymać adres IP i dane techniczne przeglądarki.</small></span>
+          </label>
+        </div>
+
+        <p class="privacy-dialog__note">Usługi opcjonalne dostarcza Google. <a href="https://policies.google.com/privacy?hl=pl" target="_blank" rel="noopener noreferrer">Polityka prywatności Google<span class="sr-only"> (otwiera nową kartę)</span></a>.</p>
+        <div class="privacy-dialog__actions">
+          <button class="consent-button" type="button" data-dialog-reject>Tylko niezbędne</button>
+          <button class="consent-button consent-button--primary" type="button" data-consent-save>Zapisz wybór</button>
+        </div>
+      </div>
+    </dialog>
+
     <script type="module" src="./script.js"></script>
   </body>
 </html>

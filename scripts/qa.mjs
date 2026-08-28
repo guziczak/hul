@@ -42,6 +42,7 @@ const desktop = await page.evaluate(() => ({
     lineDelays: [...heading.querySelectorAll(".split-word:not(.split-word--anchor)")].map((word) => getComputedStyle(word).getPropertyValue("--line-delay").trim()),
   })),
   images: [...document.images].map((image) => ({ complete: image.complete, width: image.naturalWidth, loading: image.loading })),
+  mediaDimensions: [...document.querySelectorAll("img, video")].map((media) => ({ width: media.getAttribute("width"), height: media.getAttribute("height") })),
   overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   externalRequests: performance.getEntriesByType("resource")
     .map((entry) => entry.name)
@@ -59,13 +60,32 @@ const desktop = await page.evaluate(() => ({
     schema: Boolean(document.querySelector('script[type="application/ld+json"]')?.textContent),
   },
   landmarkOrder: Boolean(document.querySelector("body > nav.header + main > section.hero")),
+  skipLink: {
+    firstFocusable: document.querySelector("body > a:first-child")?.classList.contains("skip-link"),
+    target: document.querySelector(".skip-link")?.getAttribute("href"),
+    mainId: document.querySelector("main")?.id,
+  },
+  privacy: {
+    storedConsent: localStorage.getItem("hul:privacy-consent:v1"),
+    cookies: document.cookie,
+    bannerHidden: document.querySelector("[data-cookie-banner]")?.hidden,
+    analyticsScript: Boolean(document.querySelector("script[data-hul-analytics]")),
+    interactiveMap: Boolean(document.querySelector("iframe[data-interactive-map]")),
+    localMap: document.querySelector("[data-map-preview] img")?.getAttribute("src"),
+  },
+  schemaAddress: JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent || "{}").address?.streetAddress,
+  glassButtons: [...document.querySelectorAll(".motion-button--glass")].map((button) => ({
+    background: getComputedStyle(button).backgroundColor,
+    blur: getComputedStyle(button).backdropFilter,
+  })),
 }));
 
 assert(desktop.js, "JS enhancement class is active");
-assert(desktop.sections === 7, "Hero and all six content sections exist in the main landmark");
+assert(desktop.sections === 8, "Hero and all seven content sections exist in the main landmark");
 assert(desktop.h1 === 1, "Exactly one H1 exists");
 assert(desktop.ctaLines === 2, "Desktop CTA keeps the target two-line split");
 assert(desktop.processLines === 2, "Process heading keeps the target two-line split");
+assert(desktop.mediaDimensions.every((media) => media.width && media.height), "Images and video declare intrinsic dimensions");
 assert(desktop.splitHeadings.every((heading) => heading.characters === heading.expected), "Every visible heading glyph receives the target animation wrapper");
 assert(desktop.splitHeadings.every((heading) => heading.lineDelays.every(Boolean)), "Heading animation delays follow the actual rendered lines");
 assert(desktop.images.filter((image) => image.loading !== "lazy").every((image) => image.complete && image.width > 0), "All initially requested desktop images decode");
@@ -75,6 +95,32 @@ assert(desktop.rootAbsoluteAssets.length === 0, "Static assets use GitHub Pages-
 assert(desktop.missingAnchors.length === 0, "All internal anchors resolve");
 assert(Object.values(desktop.meta).every(Boolean), "SEO, social and schema metadata are present");
 assert(desktop.landmarkOrder, "Primary navigation precedes hero actions in DOM and focus order");
+assert(desktop.skipLink.firstFocusable && desktop.skipLink.target === "#main-content" && desktop.skipLink.mainId === "main-content", "Skip link is the first focus target and resolves to main content");
+assert(desktop.privacy.storedConsent === null && desktop.privacy.cookies === "", "No consent value or cookie exists before the visitor decides");
+assert(!desktop.privacy.analyticsScript && !desktop.privacy.interactiveMap, "Optional services start inactive");
+assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section starts with a local map preview");
+assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
+assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
+
+const cookieBanner = page.locator("[data-cookie-banner]");
+await cookieBanner.waitFor({ state: "visible" });
+const undecidedPrivacy = await page.evaluate(() => ({
+  ariaHidden: document.querySelector("[data-cookie-banner]").getAttribute("aria-hidden"),
+  inert: document.querySelector("[data-cookie-banner]").inert,
+  externalRequests: performance.getEntriesByType("resource").filter((entry) => !entry.name.startsWith(location.origin)).length,
+  cookies: document.cookie,
+}));
+assert(undecidedPrivacy.ariaHidden === "false" && !undecidedPrivacy.inert, "The first-visit consent prompt becomes accessible and interactive");
+assert(undecidedPrivacy.externalRequests === 0 && undecidedPrivacy.cookies === "", "Showing the consent prompt does not contact third parties or set cookies");
+await cookieBanner.locator("[data-consent-reject]").click();
+await cookieBanner.waitFor({ state: "hidden" });
+const rejectedPrivacy = await page.evaluate(() => ({
+  consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
+  iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
+  analytics: Boolean(document.querySelector("script[data-hul-analytics]")),
+}));
+assert(rejectedPrivacy.consent?.version === 1 && !rejectedPrivacy.consent.analytics && !rejectedPrivacy.consent.maps, "Rejecting optional services stores an explicit category-level decision");
+assert(!rejectedPrivacy.iframe && !rejectedPrivacy.analytics, "Rejecting optional services leaves Google resources unloaded");
 
 for (let y = 0; y < await page.evaluate(() => document.documentElement.scrollHeight); y += 700) {
   await page.evaluate((top) => scrollTo(0, top), y);
@@ -108,12 +154,18 @@ let headerState = await page.locator(".header").evaluate((header) => ({
 }));
 assert(headerState.translate < -40 && headerState.translate > -90, "Header progressively hides during the first scroll phase");
 await page.evaluate(() => scrollTo(0, 700));
-await page.waitForTimeout(100);
+await page.waitForTimeout(520);
 headerState = await page.locator(".header").evaluate((header) => ({
   translate: parseFloat(header.style.getPropertyValue("--header-translate")),
   scrolled: header.classList.contains("header--scrolled"),
+  buttonBlur: getComputedStyle(header.querySelector(".motion-button--glass")).backdropFilter,
 }));
-assert(Math.abs(headerState.translate) < 0.1 && headerState.scrolled, "Header returns in its solid state after the hero threshold");
+assert(Math.abs(headerState.translate) < 0.1 && headerState.scrolled && headerState.buttonBlur === "none", `Header returns in its solid, non-blurred state after the hero threshold (${headerState.buttonBlur})`);
+
+await page.locator('.header__desktop-links a[href="#kontakt"]').click();
+await page.waitForFunction(() => Math.abs(document.querySelector(".visit").getBoundingClientRect().top - 64) <= 2);
+const contactAnchorTop = await page.locator(".visit").evaluate((section) => section.getBoundingClientRect().top);
+assert(Math.abs(contactAnchorTop - 64) <= 2, `The Contact anchor clears the fixed 64px header (${contactAnchorTop}px)`);
 
 await page.setViewportSize({ width: 390, height: 844 });
 await page.evaluate(() => scrollTo(0, 0));
@@ -234,14 +286,111 @@ const noJs = await noJsPage.evaluate(() => ({
   answers: [...document.querySelectorAll(".faq-item__answer-inner")].map((answer) => answer.getBoundingClientRect().height),
   faqButtons: [...document.querySelectorAll(".faq-item__question")].map((button) => ({ expanded: button.getAttribute("aria-expanded"), tabIndex: button.tabIndex, disabled: button.disabled })),
   content: document.body.innerText.includes("Działamy wszędzie tam"),
+  privacyHidden: document.querySelector("[data-cookie-banner]")?.hidden,
+  privacyButtonDisplay: getComputedStyle(document.querySelector("[data-open-privacy]")).display,
+  map: {
+    previewVisible: document.querySelector("[data-map-preview] img")?.getBoundingClientRect().height > 0,
+    enableButtonDisplay: getComputedStyle(document.querySelector("[data-enable-map]")).display,
+    externalLink: document.querySelector("[data-map-preview] a[href*='google.com/maps']")?.href,
+    iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
+  },
 }));
 assert(!noJs.js, "No-JS document does not claim enhancement state");
 assert(noJs.headerHeight === 208 && noJs.menuVisibility === "hidden", "No-JS mobile navigation stays permanently visible without a fake toggle");
 assert(noJs.links.every((link) => link.opacity === "1" && link.height > 0), "No-JS navigation links remain readable");
 assert(noJs.answers.every((height) => height > 0) && noJs.content, "All FAQ content remains readable without JavaScript");
 assert(noJs.faqButtons.every((button) => button.expanded === "true" && button.tabIndex === -1 && button.disabled), "No-JS FAQ exposes expanded content without dead controls");
+assert(noJs.privacyHidden && noJs.privacyButtonDisplay === "none", "No-JS mode does not expose unusable consent controls");
+assert(noJs.map.previewVisible && noJs.map.enableButtonDisplay === "none" && noJs.map.externalLink && !noJs.map.iframe, "No-JS mode keeps the local map and a working external directions link");
 
 await noJsPage.close();
+
+const mapContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+const mapPage = await mapContext.newPage();
+const mapExternalRequests = [];
+mapPage.on("request", (request) => {
+  if (!request.url().startsWith(new URL(baseUrl).origin)) mapExternalRequests.push(request.url());
+});
+await mapContext.route("https://maps.google.com/**", (route) => route.fulfill({
+  status: 200,
+  contentType: "text/html",
+  body: "<!doctype html><title>Testowa mapa Google</title>",
+}));
+await mapPage.goto(baseUrl, { waitUntil: "networkidle" });
+await mapPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+await mapPage.locator("[data-consent-reject]").click();
+await mapPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
+await mapPage.locator("[data-contact-map]").scrollIntoViewIfNeeded();
+await mapPage.locator("[data-enable-map]").click();
+await mapPage.locator("[data-privacy-dialog]").waitFor({ state: "visible" });
+let mapConsentState = await mapPage.evaluate(() => ({
+  focused: document.activeElement === document.querySelector("[data-consent-maps]"),
+  checked: document.querySelector("[data-consent-maps]").checked,
+  iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
+}));
+assert(mapConsentState.focused && !mapConsentState.checked && !mapConsentState.iframe, "Requesting the interactive map opens settings on the unselected Maps category");
+await mapPage.keyboard.press("Space");
+await mapPage.locator("[data-consent-save]").click();
+await mapPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
+await mapPage.waitForTimeout(150);
+mapConsentState = await mapPage.evaluate(() => ({
+  consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
+  previewHidden: document.querySelector("[data-map-preview]").hidden,
+  iframeTitle: document.querySelector("iframe[data-interactive-map]")?.title,
+  referrerPolicy: document.querySelector("iframe[data-interactive-map]")?.referrerPolicy,
+  focused: document.activeElement === document.querySelector("iframe[data-interactive-map]"),
+  status: document.querySelector("[data-map-status]")?.textContent,
+}));
+assert(mapConsentState.consent?.maps && !mapConsentState.consent.analytics, "Maps can be accepted independently from Analytics");
+assert(mapConsentState.previewHidden && mapConsentState.iframeTitle && mapConsentState.referrerPolicy === "no-referrer", "Consent replaces the preview with a titled, privacy-restricted iframe");
+assert(mapConsentState.focused && mapConsentState.status.includes("włączona"), "Loading the requested map preserves focus and announces the change");
+assert(mapExternalRequests.some((url) => url.startsWith("https://maps.google.com/")), "Google Maps is requested only after Maps consent");
+assert(!mapExternalRequests.some((url) => url.includes("googletagmanager.com")), "Map consent alone does not request Google Analytics");
+
+await mapPage.locator("[data-open-privacy]").click();
+await mapPage.locator("[data-consent-maps]").focus();
+await mapPage.keyboard.press("Space");
+await Promise.all([
+  mapPage.waitForNavigation({ waitUntil: "domcontentloaded" }),
+  mapPage.locator("[data-consent-save]").click(),
+]);
+await mapPage.waitForTimeout(120);
+const revokedMap = await mapPage.evaluate(() => ({
+  consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
+  iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
+  previewHidden: document.querySelector("[data-map-preview]").hidden,
+  bannerHidden: document.querySelector("[data-cookie-banner]").hidden,
+}));
+assert(!revokedMap.consent.maps && !revokedMap.iframe && !revokedMap.previewHidden, "Revoking Maps consent reloads the page without the external iframe");
+assert(revokedMap.bannerHidden, "A saved rejection does not show the first-visit prompt again");
+await mapContext.close();
+
+const acceptContext = await browser.newContext({ viewport: { width: 320, height: 568 } });
+await acceptContext.route("https://maps.google.com/**", (route) => route.fulfill({
+  status: 200,
+  contentType: "text/html",
+  body: "<!doctype html><title>Testowa mapa Google</title>",
+}));
+const acceptPage = await acceptContext.newPage();
+await acceptPage.goto(baseUrl, { waitUntil: "networkidle" });
+await acceptPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+const mobileBannerLayout = await acceptPage.evaluate(() => ({
+  overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  actions: [...document.querySelectorAll("[data-cookie-banner] button")].map((button) => {
+    const rect = button.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+  }),
+}));
+assert(mobileBannerLayout.overflow === 0 && mobileBannerLayout.actions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= 568), "The complete consent prompt stays reachable at 320px");
+await acceptPage.locator("[data-consent-accept]").click();
+await acceptPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
+const acceptedPrivacy = await acceptPage.evaluate(() => ({
+  consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
+  analyticsScript: Boolean(document.querySelector("script[data-hul-analytics]")),
+}));
+assert(acceptedPrivacy.consent.analytics && acceptedPrivacy.consent.maps, "Accept all stores both optional categories");
+assert(!acceptedPrivacy.analyticsScript, "Analytics stays physically inactive until a real GA4 measurement ID is configured");
+await acceptContext.close();
 
 const reducedContext = await browser.newContext({
   reducedMotion: "reduce",

@@ -185,3 +185,278 @@ if (reducedMotion.matches) {
   ctaVideo?.pause();
   root.classList.add("reduced-motion");
 }
+
+/* Privacy consent, Google Analytics and the interactive contact map */
+const PRIVACY_STORAGE_KEY = "hul:privacy-consent:v1";
+const PRIVACY_VERSION = 1;
+// Uzupełnij pustą wartość prawdziwym identyfikatorem GA4, gdy usługa będzie gotowa.
+const GA_MEASUREMENT_ID = "";
+const ANALYTICS_HOSTS = new Set(["guziczak.github.io", "hul.com.pl", "www.hul.com.pl"]);
+
+const cookieBanner = document.querySelector("[data-cookie-banner]");
+const privacyDialog = document.querySelector("[data-privacy-dialog]");
+const analyticsConsentInput = document.querySelector("[data-consent-analytics]");
+const mapsConsentInput = document.querySelector("[data-consent-maps]");
+const contactMap = document.querySelector("[data-contact-map]");
+const mapPreview = contactMap?.querySelector("[data-map-preview]");
+const mapStatus = contactMap?.querySelector("[data-map-status]");
+const mapEnableButton = contactMap?.querySelector("[data-enable-map]");
+const footerPrivacyButton = document.querySelector("[data-open-privacy]");
+
+let bannerTimer = 0;
+let dialogReturnFocus = null;
+let pendingMapRequest = false;
+
+window.dataLayer = window.dataLayer || [];
+window.gtag = window.gtag || function gtag() {
+  window.dataLayer.push(arguments);
+};
+window.gtag("consent", "default", {
+  ad_storage: "denied",
+  ad_user_data: "denied",
+  ad_personalization: "denied",
+  analytics_storage: "denied",
+  functionality_storage: "denied",
+  personalization_storage: "denied",
+  security_storage: "granted",
+  wait_for_update: 500,
+});
+
+function readConsent() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PRIVACY_STORAGE_KEY));
+    if (value?.version !== PRIVACY_VERSION) return null;
+    if (typeof value.analytics !== "boolean" || typeof value.maps !== "boolean") return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function writeConsent({ analytics, maps }) {
+  const value = {
+    version: PRIVACY_VERSION,
+    analytics: Boolean(analytics),
+    maps: Boolean(maps),
+  };
+
+  try {
+    localStorage.setItem(PRIVACY_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // Ustawienia obowiązują w bieżącej karcie, nawet gdy pamięć przeglądarki jest zablokowana.
+  }
+  return value;
+}
+
+function showCookieBanner() {
+  if (!cookieBanner || readConsent()) return;
+  cookieBanner.hidden = false;
+  cookieBanner.inert = false;
+  cookieBanner.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => cookieBanner.classList.add("is-visible"));
+}
+
+function hideCookieBanner() {
+  if (!cookieBanner || cookieBanner.hidden) return;
+  window.clearTimeout(bannerTimer);
+  if (cookieBanner.contains(document.activeElement)) document.activeElement.blur();
+  cookieBanner.inert = true;
+  cookieBanner.setAttribute("aria-hidden", "true");
+  cookieBanner.classList.remove("is-visible");
+  window.setTimeout(() => {
+    cookieBanner.hidden = true;
+  }, reducedMotion.matches ? 0 : 430);
+}
+
+function openPrivacyDialog({ focusCategory, trigger } = {}) {
+  if (!privacyDialog) return;
+  const consent = readConsent() || { analytics: false, maps: false };
+  analyticsConsentInput.checked = consent.analytics;
+  mapsConsentInput.checked = consent.maps;
+  dialogReturnFocus = trigger instanceof HTMLElement ? trigger : document.activeElement;
+  pendingMapRequest = focusCategory === "maps";
+
+  if (typeof privacyDialog.showModal === "function") privacyDialog.showModal();
+  else privacyDialog.setAttribute("open", "");
+  document.body.classList.add("privacy-open");
+
+  requestAnimationFrame(() => {
+    const target = focusCategory === "maps"
+      ? mapsConsentInput
+      : focusCategory === "analytics"
+        ? analyticsConsentInput
+        : privacyDialog.querySelector("[data-privacy-close]");
+    target?.focus({ preventScroll: true });
+  });
+}
+
+function closePrivacyDialog({ restoreFocus = true } = {}) {
+  if (!privacyDialog?.hasAttribute("open")) return;
+  const focusTarget = restoreFocus ? dialogReturnFocus : null;
+  dialogReturnFocus = null;
+  if (typeof privacyDialog.close === "function") privacyDialog.close();
+  else privacyDialog.removeAttribute("open");
+  document.body.classList.remove("privacy-open");
+  if (focusTarget instanceof HTMLElement && focusTarget.isConnected && !focusTarget.closest("[inert]")) {
+    focusTarget.focus({ preventScroll: true });
+  }
+}
+
+function canLoadAnalytics() {
+  return /^G-[A-Z0-9]{6,}$/.test(GA_MEASUREMENT_ID)
+    && location.protocol === "https:"
+    && ANALYTICS_HOSTS.has(location.hostname);
+}
+
+function loadGoogleAnalytics() {
+  if (!canLoadAnalytics() || document.querySelector("script[data-hul-analytics]")) return;
+  window.gtag("js", new Date());
+  window.gtag("config", GA_MEASUREMENT_ID, {
+    send_page_view: true,
+  });
+
+  const script = document.createElement("script");
+  script.async = true;
+  script.dataset.hulAnalytics = "true";
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_MEASUREMENT_ID)}`;
+  document.head.append(script);
+}
+
+function clearGoogleAnalyticsCookies() {
+  document.cookie.split(";").forEach((cookie) => {
+    const name = cookie.split("=")[0].trim();
+    if (name !== "_ga" && !name.startsWith("_ga_")) return;
+    document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`;
+    document.cookie = `${name}=; Max-Age=0; path=/; domain=.${location.hostname}; SameSite=Lax`;
+  });
+}
+
+function loadContactMap({ focus = false } = {}) {
+  if (!contactMap || contactMap.querySelector("iframe")) return;
+  const mapUrl = contactMap.dataset.mapUrl;
+  if (!mapUrl) return;
+
+  const iframe = document.createElement("iframe");
+  iframe.src = mapUrl;
+  iframe.title = "Interaktywna mapa Google — studio Hul w Galerii Wnętrz DOMAR";
+  iframe.loading = "lazy";
+  iframe.referrerPolicy = "no-referrer";
+  iframe.allowFullscreen = true;
+  iframe.dataset.interactiveMap = "true";
+  mapPreview.hidden = true;
+  mapPreview.inert = true;
+  contactMap.append(iframe);
+  if (mapStatus) mapStatus.textContent = "Interaktywna mapa Google została włączona.";
+  if (focus) requestAnimationFrame(() => iframe.focus({ preventScroll: true }));
+}
+
+function applyConsent(consent, { focusMap = false } = {}) {
+  window.gtag("consent", "update", {
+    analytics_storage: consent.analytics ? "granted" : "denied",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
+  });
+  if (consent.analytics) loadGoogleAnalytics();
+  if (consent.maps) loadContactMap({ focus: focusMap });
+}
+
+function saveConsent(next, { focusMap = false } = {}) {
+  const previous = readConsent();
+  const consent = writeConsent(next);
+  const revokedAnalytics = previous?.analytics && !consent.analytics;
+  const revokedMaps = previous?.maps && !consent.maps;
+  hideCookieBanner();
+  closePrivacyDialog({ restoreFocus: !focusMap });
+
+  if (revokedAnalytics || revokedMaps) {
+    if (revokedAnalytics) clearGoogleAnalyticsCookies();
+    location.reload();
+    return;
+  }
+
+  applyConsent(consent, { focusMap });
+  pendingMapRequest = false;
+}
+
+cookieBanner?.querySelector("[data-consent-accept]")?.addEventListener("click", () => {
+  saveConsent({ analytics: true, maps: true });
+});
+
+cookieBanner?.querySelector("[data-consent-reject]")?.addEventListener("click", () => {
+  saveConsent({ analytics: false, maps: false });
+});
+
+cookieBanner?.querySelector("[data-consent-settings]")?.addEventListener("click", (event) => {
+  openPrivacyDialog({ trigger: event.currentTarget });
+});
+
+footerPrivacyButton?.addEventListener("click", (event) => {
+  openPrivacyDialog({ trigger: event.currentTarget });
+});
+
+mapEnableButton?.addEventListener("click", (event) => {
+  const consent = readConsent();
+  if (consent?.maps) {
+    loadContactMap({ focus: true });
+    return;
+  }
+  openPrivacyDialog({ focusCategory: "maps", trigger: event.currentTarget });
+});
+
+privacyDialog?.querySelector("[data-privacy-close]")?.addEventListener("click", () => {
+  pendingMapRequest = false;
+  closePrivacyDialog();
+});
+
+privacyDialog?.querySelector("[data-consent-save]")?.addEventListener("click", () => {
+  const focusMap = pendingMapRequest && mapsConsentInput.checked;
+  saveConsent({
+    analytics: analyticsConsentInput.checked,
+    maps: mapsConsentInput.checked,
+  }, { focusMap });
+});
+
+privacyDialog?.querySelector("[data-dialog-reject]")?.addEventListener("click", () => {
+  saveConsent({ analytics: false, maps: false });
+});
+
+privacyDialog?.addEventListener("click", (event) => {
+  if (event.target !== privacyDialog) return;
+  pendingMapRequest = false;
+  closePrivacyDialog();
+});
+
+privacyDialog?.addEventListener("cancel", () => {
+  pendingMapRequest = false;
+  document.body.classList.remove("privacy-open");
+});
+
+privacyDialog?.addEventListener("close", () => {
+  document.body.classList.remove("privacy-open");
+  if (dialogReturnFocus instanceof HTMLElement && dialogReturnFocus.isConnected && !dialogReturnFocus.closest("[inert]")) {
+    dialogReturnFocus.focus({ preventScroll: true });
+  }
+  dialogReturnFocus = null;
+});
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== PRIVACY_STORAGE_KEY) return;
+  const consent = readConsent();
+  if (!consent) {
+    location.reload();
+    return;
+  }
+  const mapsMustUnload = !consent.maps && Boolean(contactMap?.querySelector("iframe[data-interactive-map]"));
+  const analyticsMustUnload = !consent.analytics && Boolean(document.querySelector("script[data-hul-analytics]"));
+  if (mapsMustUnload || analyticsMustUnload) {
+    if (analyticsMustUnload) clearGoogleAnalyticsCookies();
+    location.reload();
+    return;
+  }
+  applyConsent(consent);
+});
+
+const storedConsent = readConsent();
+if (storedConsent) applyConsent(storedConsent);
+else bannerTimer = window.setTimeout(showCookieBanner, reducedMotion.matches ? 0 : 650);
