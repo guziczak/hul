@@ -365,11 +365,12 @@ main {
   color: var(--paper);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  transform: translateY(var(--header-translate, 0));
+  transform: translate3d(0, var(--header-translate, 0px), 0);
   transition:
     height 560ms var(--ease-out),
     background-color 420ms var(--ease-out),
     backdrop-filter 420ms var(--ease-out);
+  will-change: transform;
 }
 
 .header--scrolled {

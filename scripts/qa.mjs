@@ -159,13 +159,23 @@ faqState = await page.locator(".faq-item").evaluateAll((items) => items.map((ite
 assert(!faqState[0] && faqState[1], "Closing one FAQ does not close another");
 
 await page.evaluate(() => scrollTo(0, 300));
-await page.waitForTimeout(100);
+await page.waitForTimeout(80);
 let headerState = await page.locator(".header").evaluate((header) => ({
+  translate: parseFloat(header.style.getPropertyValue("--header-translate")),
+  unit: header.style.getPropertyValue("--header-translate").trim().slice(-2),
+  scrolled: header.classList.contains("header--scrolled"),
+}));
+assert(headerState.translate < -5 && headerState.translate > -50 && headerState.unit === "px", "Header follows the scroll target with the measured Framer spring lag");
+await page.waitForTimeout(520);
+headerState = await page.locator(".header").evaluate((header) => ({
   translate: parseFloat(header.style.getPropertyValue("--header-translate")),
   scrolled: header.classList.contains("header--scrolled"),
 }));
-assert(headerState.translate < -40 && headerState.translate > -90, "Header progressively hides during the first scroll phase");
+assert(headerState.translate < -58 && headerState.translate > -70, "Header spring settles at the original pixel-based scroll target");
 await page.evaluate(() => scrollTo(0, 700));
+await page.waitForTimeout(80);
+const returningHeaderTranslate = await page.locator(".header").evaluate((header) => parseFloat(header.style.getPropertyValue("--header-translate")));
+assert(returningHeaderTranslate > headerState.translate && returningHeaderTranslate < -5, "Header retains visible inertia while returning after the scroll phase");
 await page.waitForTimeout(520);
 headerState = await page.locator(".header").evaluate((header) => ({
   translate: parseFloat(header.style.getPropertyValue("--header-translate")),

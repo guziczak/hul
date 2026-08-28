@@ -3,6 +3,7 @@ const header = document.querySelector(".header");
 const hero = document.querySelector(".hero");
 const menuToggle = document.querySelector(".menu-toggle");
 const mobileLinks = document.querySelector(".header__mobile-links");
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 function setMenu(open) {
   header.classList.toggle("header--open", open);
@@ -30,9 +31,73 @@ document.addEventListener("keydown", (event) => {
   menuToggle.focus();
 });
 
-let headerFrame = 0;
+let headerUpdateFrame = 0;
+let headerMotionFrame = 0;
+let headerMotionTime = 0;
+let headerMotionInitialized = false;
+let headerTargetTranslate = 0;
+let headerRenderedTranslate = 0;
+let headerVelocity = 0;
 
-function updateHeader() {
+function renderHeader(position) {
+  const rendered = Math.abs(position) < 0.0005 ? 0 : position;
+  header.style.setProperty("--header-translate", `${rendered}px`);
+}
+
+function stepHeaderMotion(now) {
+  const elapsed = headerMotionTime ? Math.min((now - headerMotionTime) / 1000, 0.064) : 1 / 60;
+  headerMotionTime = now;
+
+  // Exact overdamped spring response: stiffness 500, damping 60, mass 1.
+  // Its two decay rates are -10 and -50, matching the Framer source motion.
+  const error = headerRenderedTranslate - headerTargetTranslate;
+  const slowComponent = (headerVelocity + 50 * error) / 40;
+  const fastComponent = error - slowComponent;
+  const slowDecay = Math.exp(-10 * elapsed);
+  const fastDecay = Math.exp(-50 * elapsed);
+
+  headerRenderedTranslate = headerTargetTranslate
+    + slowComponent * slowDecay
+    + fastComponent * fastDecay;
+  headerVelocity = -10 * slowComponent * slowDecay - 50 * fastComponent * fastDecay;
+  renderHeader(headerRenderedTranslate);
+
+  const settled = Math.abs(headerRenderedTranslate - headerTargetTranslate) < 0.01
+    && Math.abs(headerVelocity) < 0.1;
+  if (settled) {
+    headerRenderedTranslate = headerTargetTranslate;
+    headerVelocity = 0;
+    headerMotionTime = 0;
+    headerMotionFrame = 0;
+    renderHeader(headerRenderedTranslate);
+    return;
+  }
+
+  headerMotionFrame = requestAnimationFrame(stepHeaderMotion);
+}
+
+function requestHeaderMotion() {
+  if (headerMotionFrame) return;
+  headerMotionTime = 0;
+  headerMotionFrame = requestAnimationFrame(stepHeaderMotion);
+}
+
+function setHeaderTarget(translate, instant = false) {
+  headerTargetTranslate = translate;
+  if (!headerMotionInitialized || instant || reducedMotion.matches) {
+    if (headerMotionFrame) cancelAnimationFrame(headerMotionFrame);
+    headerMotionInitialized = true;
+    headerMotionFrame = 0;
+    headerMotionTime = 0;
+    headerVelocity = 0;
+    headerRenderedTranslate = headerTargetTranslate;
+    renderHeader(headerRenderedTranslate);
+    return;
+  }
+  requestHeaderMotion();
+}
+
+function updateHeader(instant = false) {
   if (!header || !hero) return;
 
   const heroHeight = hero.getBoundingClientRect().height;
@@ -51,14 +116,14 @@ function updateHeader() {
 
   const scrolled = scroll >= hideEnd || menuOpen;
   header.classList.toggle("header--scrolled", scrolled);
-  header.style.setProperty("--header-translate", `${translate}%`);
+  setHeaderTarget(translate, instant);
 }
 
 function requestHeaderUpdate() {
-  if (headerFrame) return;
-  headerFrame = requestAnimationFrame(() => {
+  if (headerUpdateFrame) return;
+  headerUpdateFrame = requestAnimationFrame(() => {
     updateHeader();
-    headerFrame = 0;
+    headerUpdateFrame = 0;
   });
 }
 
@@ -67,6 +132,7 @@ window.addEventListener("resize", () => {
   if (window.innerWidth >= 1200 && header.classList.contains("header--open")) setMenu(false);
   requestHeaderUpdate();
 }, { passive: true });
+reducedMotion.addEventListener?.("change", () => updateHeader(true));
 setMenu(false);
 
 function splitHeading(heading) {
@@ -172,7 +238,6 @@ document.querySelectorAll(".faq-item__question").forEach((button) => {
 });
 
 const ctaVideo = document.querySelector(".contact-cta__video");
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 if (ctaVideo && !reducedMotion.matches) {
   const videoObserver = new IntersectionObserver(
     ([entry]) => {
