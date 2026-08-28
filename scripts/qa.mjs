@@ -447,6 +447,11 @@ await acceptPage.waitForTimeout(520);
 const mobileBannerLayout = await acceptPage.evaluate(() => ({
   overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   bannerTop: document.querySelector("[data-cookie-banner]").getBoundingClientRect().top,
+  bannerHeight: document.querySelector("[data-cookie-banner]").getBoundingClientRect().height,
+  copyLines: Math.round(
+    document.querySelector(".cookie-banner__copy p").getBoundingClientRect().height
+      / parseFloat(getComputedStyle(document.querySelector(".cookie-banner__copy p")).lineHeight),
+  ),
   actions: [...document.querySelectorAll("[data-cookie-banner] button")].map((button) => {
     const rect = button.getBoundingClientRect();
     return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
@@ -457,6 +462,7 @@ const mobileBannerLayout = await acceptPage.evaluate(() => ({
   }),
 }));
 assert(mobileBannerLayout.overflow === 0 && mobileBannerLayout.actions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= 568), "The complete consent prompt stays reachable at 320px");
+assert(new Set(mobileBannerLayout.actions.map((rect) => Math.round(rect.top))).size === 1 && mobileBannerLayout.copyLines <= 2 && mobileBannerLayout.bannerHeight <= 150, "The mobile consent prompt keeps three actions on one row and compact copy at 320px");
 assert(mobileBannerLayout.quickActions.length === 2 && mobileBannerLayout.quickActions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= mobileBannerLayout.bannerTop - 8), "Floating actions move above the mobile consent prompt without overlap");
 await acceptPage.locator("[data-consent-accept]").click();
 await acceptPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });

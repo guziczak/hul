@@ -1444,6 +1444,10 @@ body.privacy-open .quick-actions {
   color: var(--ink);
 }
 
+.consent-label--compact {
+  display: none;
+}
+
 .consent-link {
   padding: 8px;
   background: transparent;
@@ -2552,18 +2556,46 @@ body.privacy-open {
     bottom: 8px;
     left: 8px;
     width: calc(100% - 16px);
-    gap: 16px;
-    padding: 16px;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .cookie-banner__copy strong {
+    margin-bottom: 3px;
+    font-size: 20px;
+    line-height: 24px;
+  }
+
+  .cookie-banner__copy p {
+    font-size: 12px;
+    line-height: 17px;
   }
 
   .cookie-banner__actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .cookie-banner__actions .consent-button,
+  .cookie-banner__actions .consent-link {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 3px;
+    font-size: 12px;
   }
 
   .cookie-banner__actions .consent-link {
-    grid-column: 1 / -1;
-    justify-self: center;
+    grid-column: auto;
+    justify-self: stretch;
+  }
+
+  .cookie-banner__actions .consent-label--wide {
+    display: none;
+  }
+
+  .cookie-banner__actions .consent-label--compact {
+    display: inline;
   }
 
   .privacy-dialog {
