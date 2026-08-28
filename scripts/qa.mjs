@@ -360,8 +360,10 @@ const iphoneContext = await browser.newContext({
   isMobile: true,
 });
 let releaseHeroResponse;
+let stalledHeroRequest = false;
 const heroResponseGate = new Promise((resolve) => { releaseHeroResponse = resolve; });
 await iphoneContext.route("**/hero-mobile-1280.webp", async (route) => {
+  stalledHeroRequest = true;
   await heroResponseGate;
   await route.continue();
 });
@@ -372,7 +374,10 @@ const guardedHero = await iphonePage.evaluate(() => ({
   placeholder: getComputedStyle(document.querySelector(".hero__media")).backgroundImage,
   currentSrc: document.querySelector("[data-hero-image]").currentSrc,
 }));
-assert(guardedHero.opacity === "0" && guardedHero.placeholder.includes("hero-mobile-placeholder.webp") && guardedHero.currentSrc.includes("hero-mobile-1280.webp"), "A stalled DPR3 hero request shows the complete placeholder instead of a half-painted image");
+assert(
+  stalledHeroRequest && guardedHero.opacity === "0" && guardedHero.placeholder.includes("hero-mobile-placeholder.webp"),
+  `A stalled DPR3 hero request shows the complete placeholder instead of a half-painted image (${JSON.stringify({ ...guardedHero, stalledHeroRequest })})`,
+);
 releaseHeroResponse();
 await iphonePage.waitForFunction(() => document.querySelector(".hero__media").classList.contains("is-decoded"));
 await iphonePage.waitForTimeout(450);
