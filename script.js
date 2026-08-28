@@ -312,6 +312,25 @@ function syncFloatingUiOffsets() {
   }
   banner?.style.setProperty("--cookie-banner-bottom", `${cookieBannerBottom}px`);
 
+  const heroContent = hero?.querySelector(".hero__content");
+  if (heroContent && hero) {
+    if (banner && !banner.hidden) {
+      const heroRect = hero.getBoundingClientRect();
+      const bannerTargetTop = window.innerHeight - cookieBannerBottom - banner.offsetHeight;
+      const restingBottom = parseFloat(getComputedStyle(hero).getPropertyValue("--hero-content-resting-bottom")) || 0;
+      const requiredBottom = heroRect.bottom - bannerTargetTop + (mobile ? 16 : 20);
+      const headerHeight = header?.querySelector(".header__top")?.offsetHeight || 64;
+      const maximumBottom = Math.max(
+        restingBottom,
+        heroRect.bottom - heroContent.offsetHeight - headerHeight - (mobile ? 12 : 20),
+      );
+      const heroContentBottom = Math.min(Math.max(restingBottom, requiredBottom), maximumBottom);
+      heroContent.style.setProperty("--hero-content-bottom", `${heroContentBottom}px`);
+    } else {
+      heroContent.style.removeProperty("--hero-content-bottom");
+    }
+  }
+
   if (!quickActions) return;
   const bannerOffset = banner && !banner.hidden
     ? cookieBannerBottom + banner.offsetHeight + 12
@@ -364,10 +383,12 @@ const mapEnableButton = contactMap?.querySelector("[data-enable-map]");
 const footerPrivacyButton = document.querySelector("[data-open-privacy]");
 
 if (cookieBanner && typeof ResizeObserver === "function") {
-  const cookieBannerResizeObserver = new ResizeObserver(syncFloatingUiOffsets);
-  cookieBannerResizeObserver.observe(cookieBanner);
+  const floatingUiResizeObserver = new ResizeObserver(syncFloatingUiOffsets);
+  floatingUiResizeObserver.observe(cookieBanner);
   const footer = document.querySelector(".footer");
-  if (footer) cookieBannerResizeObserver.observe(footer);
+  if (footer) floatingUiResizeObserver.observe(footer);
+  const heroContent = hero?.querySelector(".hero__content");
+  if (heroContent) floatingUiResizeObserver.observe(heroContent);
 }
 
 let bannerTimer = 0;

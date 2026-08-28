@@ -140,6 +140,18 @@ const undecidedPrivacy = await page.evaluate(() => ({
 assert(undecidedPrivacy.ariaHidden === "false" && !undecidedPrivacy.inert, "The first-visit consent prompt becomes accessible and interactive");
 assert(undecidedPrivacy.background === "rgba(50, 38, 31, 0.97)", "The consent prompt uses the warm dark-oak brand surface");
 assert(undecidedPrivacy.externalRequests === 0 && undecidedPrivacy.cookies === "", "Showing the consent prompt does not contact third parties or set cookies");
+await page.waitForTimeout(520);
+const desktopHeroConsentLayout = await page.evaluate(() => {
+  const header = document.querySelector(".header__top").getBoundingClientRect();
+  const content = document.querySelector(".hero__content").getBoundingClientRect();
+  const actions = document.querySelector(".hero__actions").getBoundingClientRect();
+  const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  return {
+    headerGap: content.top - header.bottom,
+    bannerGap: banner.top - actions.bottom,
+  };
+});
+assert(desktopHeroConsentLayout.headerGap >= 19 && desktopHeroConsentLayout.bannerGap >= 19, "The desktop hero content stays between the header and an undecided consent prompt");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
@@ -366,8 +378,9 @@ for (const width of [320, 431, 768, 810, 1200, 1664, 1920]) {
   }
 }
 
+const shortContext = await browser.newContext();
 for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }, { width: 810, height: 600 }, { width: 1200, height: 600 }]) {
-  const shortPage = await context.newPage();
+  const shortPage = await shortContext.newPage();
   await shortPage.setViewportSize(viewport);
   await shortPage.goto(baseUrl, { waitUntil: "networkidle" });
   await shortPage.evaluate(() => document.fonts.ready);
@@ -376,11 +389,20 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 568 }
   await shortPage.waitForTimeout(760);
   const action = await shortPage.locator(".hero__actions").evaluate((element) => {
     const rect = element.getBoundingClientRect();
-    return { visible: getComputedStyle(element).opacity === "1", bottom: rect.bottom, viewportHeight: innerHeight };
+    const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+    return {
+      visible: getComputedStyle(element).opacity === "1",
+      bottom: rect.bottom,
+      bannerTop: banner.top,
+      viewportHeight: innerHeight,
+    };
   });
   assert(action.visible && action.bottom <= action.viewportHeight, `Hero actions stay visible at ${viewport.width}×${viewport.height}`);
+  const requiredConsentGap = viewport.width <= 809 ? 15 : 19;
+  assert(action.bottom <= action.bannerTop - requiredConsentGap, `Hero actions clear consent at ${viewport.width}x${viewport.height}`);
   await shortPage.close();
 }
+await shortContext.close();
 
 const iphoneContext = await browser.newContext({
   viewport: { width: 430, height: 932 },
@@ -553,6 +575,18 @@ await acceptContext.route("https://maps.google.com/**", (route) => route.fulfill
 const acceptPage = await acceptContext.newPage();
 await acceptPage.goto(baseUrl, { waitUntil: "networkidle" });
 await acceptPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+await acceptPage.waitForTimeout(520);
+const mobileHeroConsentLayout = await acceptPage.evaluate(() => {
+  const header = document.querySelector(".header__top").getBoundingClientRect();
+  const content = document.querySelector(".hero__content").getBoundingClientRect();
+  const actions = document.querySelector(".hero__actions").getBoundingClientRect();
+  const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  return {
+    headerGap: content.top - header.bottom,
+    bannerGap: banner.top - actions.bottom,
+  };
+});
+assert(mobileHeroConsentLayout.headerGap >= 11 && mobileHeroConsentLayout.bannerGap >= 15, "The 320px hero lifts above consent without entering the mobile header");
 await acceptPage.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, 2000);
