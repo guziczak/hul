@@ -1066,6 +1066,35 @@ assert(!acceptedPrivacy.analyticsScript, "Analytics stays physically inactive un
 assert(Math.abs(acceptedPrivacy.contactTop) <= 0.5 && Math.abs(acceptedPrivacy.contactMinHeight) <= 0.5 && acceptedPrivacy.topActionDisplay === "grid" && !acceptedPrivacy.ctaGuard && !acceptedPrivacy.phoneDocked && !acceptedPrivacy.inlineOffset && !acceptedPrivacy.inlineMinHeight, "Accepting consent returns the final CTA, phone and top arrow to their normal state");
 await acceptContext.close();
 
+const stableFooterPhoneContext = await browser.newContext({ viewport: { width: 430, height: 932 } });
+const stableFooterPhonePage = await stableFooterPhoneContext.newPage();
+await stableFooterPhonePage.goto(baseUrl, { waitUntil: "networkidle" });
+await stableFooterPhonePage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+await stableFooterPhonePage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, document.documentElement.scrollHeight);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await stableFooterPhonePage.waitForTimeout(520);
+const bottomScrollY = await stableFooterPhonePage.evaluate(() => scrollY);
+await stableFooterPhonePage.evaluate((targetY) => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, targetY);
+  document.documentElement.style.removeProperty("scroll-behavior");
+}, Math.max(0, bottomScrollY - 160));
+await stableFooterPhonePage.waitForTimeout(520);
+const stableFooterPhone = await stableFooterPhonePage.evaluate(() => {
+  const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  return {
+    bannerGap: banner.top - phone.bottom,
+    rightGap: Math.abs(banner.right - phone.right),
+    docked: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--footer-docked"),
+  };
+});
+assert(stableFooterPhone.bannerGap >= 11 && stableFooterPhone.bannerGap <= 17 && stableFooterPhone.rightGap <= 0.5 && !stableFooterPhone.docked, "A slight upward scroll from the footer keeps the phone on the consent rail instead of throwing it above the CTA");
+await stableFooterPhoneContext.close();
+
 const localizedPages = [
   {
     code: "en",
