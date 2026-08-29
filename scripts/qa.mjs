@@ -816,6 +816,29 @@ for (const localized of localizedPages) {
   assert(localizedState.externalRequests.length === 0, `${localized.code.toUpperCase()} makes no third-party request before consent`);
 
   await localizedPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+  await localizedPage.setViewportSize({ width: 320, height: 568 });
+  await localizedPage.waitForTimeout(620);
+  const localizedConsentLayout = await localizedPage.evaluate(() => {
+    const header = document.querySelector(".header__top").getBoundingClientRect();
+    const hero = document.querySelector(".hero__content").getBoundingClientRect();
+    const heroActions = document.querySelector(".hero__actions").getBoundingClientRect();
+    const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+    const consentActions = [...document.querySelectorAll("[data-cookie-banner] button")].map((button) => button.getBoundingClientRect());
+    const copy = document.querySelector(".cookie-banner__copy p");
+    return {
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      headerGap: hero.top - header.bottom,
+      bannerGap: banner.top - heroActions.bottom,
+      bannerHeight: banner.height,
+      copyLines: Math.round(copy.getBoundingClientRect().height / parseFloat(getComputedStyle(copy).lineHeight)),
+      actionRows: new Set(consentActions.map((rect) => Math.round(rect.top))).size,
+      actionsInViewport: consentActions.every((rect) => rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight),
+      heroButtonsFit: [...document.querySelectorAll(".hero__actions .motion-button__track")]
+        .every((track) => track.scrollWidth <= track.clientWidth + 1),
+    };
+  });
+  assert(localizedConsentLayout.overflow === 0 && localizedConsentLayout.bannerHeight <= 150 && localizedConsentLayout.copyLines <= 2 && localizedConsentLayout.actionRows === 1 && localizedConsentLayout.actionsInViewport && localizedConsentLayout.heroButtonsFit, `${localized.code.toUpperCase()} hero actions and consent prompt remain compact and reachable at 320px`);
+  assert(localizedConsentLayout.headerGap >= 11 && localizedConsentLayout.bannerGap >= 15, `${localized.code.toUpperCase()} mobile hero stays clear of both header and consent prompt`);
   await localizedPage.locator("[data-consent-reject]").click();
   await localizedPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
   await localizedPage.setViewportSize({ width: 390, height: 844 });
@@ -828,10 +851,13 @@ for (const localized of localizedPages) {
   }));
   assert(localizedMenu.height === 240 && localizedMenu.label === localized.menuClose && localizedMenu.currentVisible, `${localized.code.toUpperCase()} mobile menu localizes its controls and exposes language selection`);
   await localizedPage.locator(".menu-toggle").click();
+  await localizedPage.setViewportSize({ width: 1280, height: 800 });
+  await localizedPage.waitForTimeout(220);
 
   await localizedPage.locator("[data-contact-map]").scrollIntoViewIfNeeded();
   await localizedPage.locator("[data-enable-map]").click();
   await localizedPage.locator("[data-privacy-dialog]").waitFor({ state: "visible" });
+  await localizedPage.waitForFunction(() => document.activeElement === document.querySelector("[data-consent-maps]"));
   await localizedPage.keyboard.press("Space");
   await localizedPage.locator("[data-consent-save]").click();
   await localizedPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
