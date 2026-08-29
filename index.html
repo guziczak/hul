@@ -8,16 +8,24 @@
     <meta name="description" content="Hul projektuje i wykonuje z litego drewna kuchnie na wymiar. Ponad 30 lat doświadczenia, własne sezonowanie drewna i kompleksowa realizacja." />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="pl_PL" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="de_DE" />
     <meta property="og:site_name" content="Hul" />
     <meta property="og:title" content="Hul — kuchnie z drewna na wymiar" />
     <meta property="og:description" content="Drewniane kuchnie na wymiar, które oddychają razem z domem." />
     <meta property="og:url" content="https://guziczak.github.io/hul/" />
     <meta property="og:image" content="https://guziczak.github.io/hul/public/images/hero-desktop.jpg" />
+    <meta property="og:image:alt" content="Jasna kuchnia Hul z litego drewna" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Hul — kuchnie z drewna na wymiar" />
     <meta name="twitter:description" content="Drewniane kuchnie na wymiar, które oddychają razem z domem." />
     <meta name="twitter:image" content="https://guziczak.github.io/hul/public/images/hero-desktop.jpg" />
+    <meta name="twitter:image:alt" content="Jasna kuchnia Hul z litego drewna" />
     <link rel="canonical" href="https://guziczak.github.io/hul/" />
+    <link rel="alternate" hreflang="pl" href="https://guziczak.github.io/hul/" />
+    <link rel="alternate" hreflang="en" href="https://guziczak.github.io/hul/en/" />
+    <link rel="alternate" hreflang="de" href="https://guziczak.github.io/hul/de/" />
+    <link rel="alternate" hreflang="x-default" href="https://guziczak.github.io/hul/" />
     <link rel="icon" href="./public/favicon.svg" type="image/svg+xml" />
     <title>Hul — kuchnie z drewna na wymiar</title>
     <script>
@@ -38,25 +46,52 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "HomeAndConstructionBusiness",
-        "@id": "https://guziczak.github.io/hul/#business",
-        "name": "Hul",
-        "url": "https://guziczak.github.io/hul/",
-        "image": "https://guziczak.github.io/hul/public/images/hero-desktop.jpg",
-        "telephone": "+48 71 781 03 07",
-        "email": "domar@kuchniezdrewna.pl",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "ul. Braniborska 14, Galeria Wnętrz DOMAR, poziom 1",
-          "postalCode": "53-680",
-          "addressLocality": "Wrocław",
-          "addressCountry": "PL"
-        },
-        "hasMap": "https://www.google.com/maps/search/?api=1&query=Galeria+Wn%C4%99trz+DOMAR%2C+Braniborska+14%2C+53-680+Wroc%C5%82aw",
-        "sameAs": ["https://hul.com.pl/"],
-        "foundingDate": "1995",
-        "description": "Projektowanie i wykonywanie kuchni na wymiar z litego drewna.",
-        "areaServed": ["Polska", "Europa"]
+        "@graph": [
+          {
+            "@type": "HomeAndConstructionBusiness",
+            "@id": "https://guziczak.github.io/hul/#business",
+            "name": "Hul",
+            "url": "https://guziczak.github.io/hul/",
+            "image": "https://guziczak.github.io/hul/public/images/hero-desktop.jpg",
+            "telephone": "+48 71 781 03 07",
+            "email": "domar@kuchniezdrewna.pl",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "ul. Braniborska 14, Galeria Wnętrz DOMAR, poziom 1",
+              "postalCode": "53-680",
+              "addressLocality": "Wrocław",
+              "addressCountry": "PL"
+            },
+            "hasMap": "https://www.google.com/maps/search/?api=1&query=Galeria+Wn%C4%99trz+DOMAR%2C+Braniborska+14%2C+53-680+Wroc%C5%82aw",
+            "sameAs": ["https://hul.com.pl/"],
+            "foundingDate": "1995",
+            "description": "Bespoke solid-wood kitchens designed and crafted in Poland for homes across Europe.",
+            "areaServed": ["Poland", "Europe"]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://guziczak.github.io/hul/#website",
+            "url": "https://guziczak.github.io/hul/",
+            "name": "Hul",
+            "publisher": { "@id": "https://guziczak.github.io/hul/#business" },
+            "inLanguage": ["pl", "en", "de"]
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://guziczak.github.io/hul/#webpage",
+            "url": "https://guziczak.github.io/hul/",
+            "name": "Hul — kuchnie z drewna na wymiar",
+            "description": "Hul projektuje i wykonuje z litego drewna kuchnie na wymiar. Ponad 30 lat doświadczenia, własne sezonowanie drewna i kompleksowa realizacja.",
+            "isPartOf": { "@id": "https://guziczak.github.io/hul/#website" },
+            "about": { "@id": "https://guziczak.github.io/hul/#business" },
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": "https://guziczak.github.io/hul/public/images/hero-desktop.jpg"
+            },
+            "inLanguage": "pl",
+            "dateModified": "2026-08-29"
+          }
+        ]
       }
     </script>
   </head>
@@ -65,17 +100,27 @@
     <nav class="header" aria-label="Główna nawigacja">
       <div class="header__inner">
         <div class="header__top">
-          <button class="menu-toggle" type="button" aria-expanded="false" aria-label="Otwórz menu"><span></span><span></span><span></span></button>
+          <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-navigation" aria-label="Otwórz menu"><span></span><span></span><span></span></button>
           <a class="logo" href="#top" aria-label="Hul — strona główna">HUL</a>
           <div class="header__desktop-links">
             <a href="#realizacje">Realizacje</a><a href="#kontakt">Kontakt</a><a href="#o-nas">O nas</a>
           </div>
+          <nav class="language-switcher language-switcher--desktop" aria-label="Wybór języka">
+            <a href="./" lang="pl" hreflang="pl" aria-current="page">PL</a>
+            <a href="./en/" lang="en" hreflang="en">EN</a>
+            <a href="./de/" lang="de" hreflang="de">DE</a>
+          </nav>
           <a class="motion-button motion-button--glass motion-button--compact" href="#kontakt">
             <span class="motion-button__track" aria-hidden="true"><span>Porozmawiajmy</span><span>Porozmawiajmy</span></span><span class="sr-only">Porozmawiajmy</span>
           </a>
         </div>
-        <div class="header__mobile-links">
+        <div class="header__mobile-links" id="mobile-navigation">
           <a href="#realizacje">Realizacje</a><a href="#kontakt">Kontakt</a><a href="#o-nas">O nas</a>
+          <nav class="language-switcher language-switcher--mobile" aria-label="Wybór języka">
+            <a href="./" lang="pl" hreflang="pl" aria-current="page">PL</a>
+            <a href="./en/" lang="en" hreflang="en">EN</a>
+            <a href="./de/" lang="de" hreflang="de">DE</a>
+          </nav>
         </div>
       </div>
     </nav>
@@ -145,7 +190,7 @@
       <section class="process">
         <div class="reveal process__intro"><span class="chip">Proces tworzenia kuchni Hul</span><h2 data-reveal-chars data-lines-desktop="Zaczynamy od drewna|i od rozmowy" data-lines-mobile="Zaczynamy od drewna|i od rozmowy">Zaczynamy od drewna i od rozmowy</h2></div>
         <div class="process__steps">
-          <article class="process-step"><span class="eyebrow">Etap 1</span><h3>Poznanie się</h3><p>Możesz odwiedzić nasze studio w Galerii Wnętrz Domar, zadzwonić lub wysłać zapytanie przez formularz. Rozmawiamy o Twoim domu, potrzebach i wizji idealnej kuchni. Na tej podstawie przedstawiamy możliwe kierunki projektu oraz zakres realizacji, aby upewnić się, że nasz sposób tworzenia wnętrz w pełni wpisuje się w Twoje oczekiwania.</p></article>
+          <article class="process-step"><span class="eyebrow">Etap 1</span><h3>Poznanie się</h3><p>Możesz odwiedzić nasze studio w Galerii Wnętrz Domar, zadzwonić lub wysłać wiadomość e-mail. Rozmawiamy o Twoim domu, potrzebach i wizji idealnej kuchni. Na tej podstawie przedstawiamy możliwe kierunki projektu oraz zakres realizacji, aby upewnić się, że nasz sposób tworzenia wnętrz w pełni wpisuje się w Twoje oczekiwania.</p></article>
           <article class="process-step"><span class="eyebrow">Etap 2</span><h3>Projekt i dopracowanie wizji</h3><p>Podczas spotkania w Twoim domu nasz architekt wykonuje dokładne pomiary, które stają się bazą do przygotowania projektu i pierwszych wizualizacji. W uważnym procesie dopracowujemy układ, materiały oraz detale. Dbamy o każdy aspekt techniczny, od rozplanowania instalacji po dobór odpowiednich sprzętów. Nasz zespół prowadzi Cię przez każdą decyzję, dbając o spójność i ponadczasowy charakter całej koncepcji.</p></article>
           <article class="process-step"><span class="eyebrow">Etap 3</span><h3>Dokumentacja konstrukcyjna</h3><p>Gdy projekt jest dopracowany, przygotowujemy szczegółową dokumentację techniczną. Architekci współpracują bezpośrednio ze stolarzami, aby każdy element został dokładnie zaplanowany. Powstają precyzyjne rysunki konstrukcyjne, które prowadzą dalsze etapy realizacji.</p></article>
           <article class="process-step"><span class="eyebrow">Etap 4</span><h3>Praca stolarska</h3><p>Przygotowane wcześniej drewno zmienia się w Twoją kuchnię. Łączymy precyzję nowoczesnych maszyn CNC z wyczuciem pracy ręcznej, dobierając odpowiednią metodę do charakteru każdego elementu. Dzięki temu możemy osiągnąć trwałość i dokładność niezależnie od stylu kuchni. Na tym etapie koordynujemy również prace z zaprzyjaźnionymi manufakturami, które przygotowują dla nas dedykowane elementy z metalu oraz minerałów.</p></article>

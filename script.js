@@ -6,6 +6,32 @@ const mobileLinks = document.querySelector(".header__mobile-links");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const heroMedia = document.querySelector(".hero__media");
 const heroImage = heroMedia?.querySelector("[data-hero-image]");
+const interfaceLanguage = document.documentElement.lang.toLowerCase().split("-")[0];
+const interfaceCopy = {
+  pl: {
+    menuOpen: "Otwórz menu",
+    menuClose: "Zamknij menu",
+    mapTitle: "Interaktywna mapa Google — studio Hul w Galerii Wnętrz DOMAR",
+    mapReady: "Interaktywna mapa Google została włączona.",
+  },
+  en: {
+    menuOpen: "Open menu",
+    menuClose: "Close menu",
+    mapTitle: "Interactive Google Map — Hul studio in the DOMAR Interior Gallery",
+    mapReady: "The interactive Google Map has been enabled.",
+  },
+  de: {
+    menuOpen: "Menü öffnen",
+    menuClose: "Menü schließen",
+    mapTitle: "Interaktive Google-Karte — Hul-Studio im Einrichtungszentrum DOMAR",
+    mapReady: "Die interaktive Google-Karte wurde aktiviert.",
+  },
+}[interfaceLanguage] || {
+  menuOpen: "Open menu",
+  menuClose: "Close menu",
+  mapTitle: "Interactive Google Map — Hul studio in the DOMAR Interior Gallery",
+  mapReady: "The interactive Google Map has been enabled.",
+};
 
 let heroDecodeVersion = 0;
 async function revealDecodedHero() {
@@ -29,7 +55,7 @@ function setMenu(open) {
   const quickActionsElement = document.querySelector("[data-quick-actions]");
   if (quickActionsElement) quickActionsElement.inert = open || document.body.classList.contains("privacy-open");
   menuToggle.setAttribute("aria-expanded", String(open));
-  menuToggle.setAttribute("aria-label", open ? "Zamknij menu" : "Otwórz menu");
+  menuToggle.setAttribute("aria-label", open ? interfaceCopy.menuClose : interfaceCopy.menuOpen);
   mobileLinks.setAttribute("aria-hidden", String(!open));
   mobileLinks.inert = !open;
   updateHeader();
@@ -553,7 +579,7 @@ function loadContactMap({ focus = false } = {}) {
 
   const iframe = document.createElement("iframe");
   iframe.src = mapUrl;
-  iframe.title = "Interaktywna mapa Google — studio Hul w Galerii Wnętrz DOMAR";
+  iframe.title = interfaceCopy.mapTitle;
   iframe.loading = "lazy";
   iframe.referrerPolicy = "no-referrer";
   iframe.allowFullscreen = true;
@@ -561,7 +587,7 @@ function loadContactMap({ focus = false } = {}) {
   mapPreview.hidden = true;
   mapPreview.inert = true;
   contactMap.append(iframe);
-  if (mapStatus) mapStatus.textContent = "Interaktywna mapa Google została włączona.";
+  if (mapStatus) mapStatus.textContent = interfaceCopy.mapReady;
   if (focus) requestAnimationFrame(() => iframe.focus({ preventScroll: true }));
 }
 

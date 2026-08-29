@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /hul/
+
+Sitemap: https://guziczak.github.io/hul/sitemap.xml

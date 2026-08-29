@@ -26,6 +26,16 @@
 - [ ] Zachować na stronie głównej skróty najważniejszych sekcji i linki do pełnych podstron.
 - [ ] Nie powielać całych bloków tekstu pomiędzy stroną główną a podstronami.
 
+## Wielojęzyczność
+
+- [x] Opublikować polską, angielską i niemiecką stronę główną jako osobne statyczne dokumenty HTML.
+- [x] Dodać widoczny i dostępny z klawiatury przełącznik `PL / EN / DE` w nawigacji desktopowej i mobilnej.
+- [x] Przetłumaczyć całą widoczną treść oraz ALT-y, ARIA, FAQ, mapę i ustawienia prywatności.
+- [x] Dodać wzajemne `hreflang` dla `pl`, `en`, `de` i `x-default` oraz osobne canonicale i metadane społecznościowe.
+- [x] Zachować wspólny CSS, JavaScript i assety bez tłumaczenia treści w runtime.
+- [ ] Przy tworzeniu przyszłych podstron utrzymywać równoległą strukturę adresów i kompletne linkowanie językowe.
+- [ ] Przed publikacją dłuższych tekstów zlecić native-speakerowi końcową korektę wersji EN i DE.
+
 ## Podstrony
 
 ### Realizacje
@@ -59,8 +69,8 @@
 - [ ] Poprawny canonical oraz Open Graph z absolutnymi adresami.
 - [ ] Schema.org zgodne z prawdziwą i widoczną treścią danej strony.
 - [ ] Logiczne linkowanie wewnętrzne; dla głębszych stron rozważyć breadcrumbs.
-- [ ] Dodać `sitemap.xml`, gdy powstaną właściwe podstrony.
-- [ ] Dodać własne `404.html` zwracane dla błędnych adresów.
+- [x] Dodać `sitemap.xml` z trzema wersjami językowymi i relacjami `hreflang`.
+- [x] Dodać własne, wielojęzyczne `404.html` dla błędnych adresów.
 - [ ] `robots.txt` konfigurować dopiero pod adresem głównym docelowej domeny; nie traktować `/hul/robots.txt` jako pliku dla całego hosta `guziczak.github.io`.
 - [ ] Po wdrożeniu podpiąć domenę do Google Search Console i wysłać sitemapę.
 

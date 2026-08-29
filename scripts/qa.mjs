@@ -74,7 +74,22 @@ const desktop = await page.evaluate(() => ({
     interactiveMap: Boolean(document.querySelector("iframe[data-interactive-map]")),
     localMap: document.querySelector("[data-map-preview] img")?.getAttribute("src"),
   },
-  schemaAddress: JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent || "{}").address?.streetAddress,
+  schemaAddress: (() => {
+    const structuredData = JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent || "{}");
+    const business = structuredData["@graph"]?.find((entry) => entry["@type"] === "HomeAndConstructionBusiness") || structuredData;
+    return business.address?.streetAddress;
+  })(),
+  schemaModel: (() => {
+    const structuredData = JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent || "{}");
+    const graph = structuredData["@graph"] || [structuredData];
+    const website = graph.find((entry) => entry["@type"] === "WebSite");
+    const webpage = graph.find((entry) => entry["@type"] === "WebPage");
+    return {
+      pageUrl: webpage?.url,
+      pageLanguage: webpage?.inLanguage,
+      siteLanguages: website?.inLanguage,
+    };
+  })(),
   glassButtons: [...document.querySelectorAll(".motion-button--glass")].map((button) => ({
     background: getComputedStyle(button).backgroundColor,
     blur: getComputedStyle(button).backdropFilter,
@@ -124,6 +139,7 @@ assert(desktop.privacy.storedConsent === null && desktop.privacy.cookies === "",
 assert(!desktop.privacy.analyticsScript && !desktop.privacy.interactiveMap, "Optional services start inactive");
 assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section starts with a local map preview");
 assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
+assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desktop.schemaModel.pageLanguage === "pl" && ["pl", "en", "de"].every((language) => desktop.schemaModel.siteLanguages?.includes(language)), "Polish WebPage and multilingual WebSite structured data are linked correctly");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
 assert(desktop.heroMedia.decoded && desktop.heroMedia.currentSrc.includes(".webp") && desktop.heroMedia.opacity === "1", "The hero reveals a fully decoded modern image rather than streaming partial pixels");
@@ -334,7 +350,7 @@ mobileState = await page.evaluate(() => ({
   bodyMenuOpen: document.body.classList.contains("menu-open"),
   quickActionsInert: document.querySelector("[data-quick-actions]").inert,
 }));
-assert(mobileState.height === 208 && mobileState.open, "Mobile menu opens to the target 208px height");
+assert(mobileState.height === 240 && mobileState.open, "Mobile menu opens to the target 240px height with language selection");
 assert(mobileState.expanded === "true" && !mobileState.inert && mobileState.hidden === "false", "Open mobile navigation is exposed accessibly");
 assert(mobileState.bodyMenuOpen && mobileState.quickActionsInert, "Open mobile navigation suppresses floating actions");
 await page.keyboard.press("Escape");
@@ -530,7 +546,7 @@ const noJs = await noJsPage.evaluate(() => ({
   },
 }));
 assert(!noJs.js, "No-JS document does not claim enhancement state");
-assert(noJs.headerHeight === 208 && noJs.menuVisibility === "hidden", "No-JS mobile navigation stays permanently visible without a fake toggle");
+assert(noJs.headerHeight === 240 && noJs.menuVisibility === "hidden", "No-JS mobile navigation and language selection stay permanently visible without a fake toggle");
 assert(noJs.links.every((link) => link.opacity === "1" && link.height > 0), "No-JS navigation links remain readable");
 assert(noJs.answers.every((height) => height > 0) && noJs.content, "All FAQ content remains readable without JavaScript");
 assert(noJs.faqButtons.every((button) => button.expanded === "true" && button.tabIndex === -1 && button.disabled), "No-JS FAQ exposes expanded content without dead controls");
@@ -587,12 +603,18 @@ assert(mapExternalRequests.some((url) => url.startsWith("https://maps.google.com
 assert(!mapExternalRequests.some((url) => url.includes("googletagmanager.com")), "Map consent alone does not request Google Analytics");
 
 await mapPage.locator("[data-open-privacy]").click();
-await mapPage.locator("[data-consent-maps]").focus();
-await mapPage.keyboard.press("Space");
-await Promise.all([
-  mapPage.waitForNavigation({ waitUntil: "domcontentloaded" }),
-  mapPage.locator("[data-consent-save]").click(),
-]);
+await mapPage.locator("[data-consent-maps]").evaluate((input) => {
+  input.checked = false;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+});
+const revokeNavigation = mapPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 10000 }).catch(() => null);
+await mapPage.locator("[data-consent-save]").click();
+await revokeNavigation;
+await mapPage.waitForFunction(() => {
+  const consent = JSON.parse(localStorage.getItem("hul:privacy-consent:v1"));
+  return consent && !consent.maps && !document.querySelector("iframe[data-interactive-map]");
+});
 await mapPage.waitForTimeout(120);
 const revokedMap = await mapPage.evaluate(() => ({
   consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
@@ -681,6 +703,161 @@ const acceptedPrivacy = await acceptPage.evaluate(() => ({
 assert(acceptedPrivacy.consent.analytics && acceptedPrivacy.consent.maps, "Accept all stores both optional categories");
 assert(!acceptedPrivacy.analyticsScript, "Analytics stays physically inactive until a real GA4 measurement ID is configured");
 await acceptContext.close();
+
+const localizedPages = [
+  {
+    code: "en",
+    path: "en/",
+    canonical: "https://guziczak.github.io/hul/en/",
+    ogLocale: "en_US",
+    cookieTitle: "Your privacy",
+    menuClose: "Close menu",
+    mapTitle: "Interactive Google Map",
+    mapStatus: "has been enabled",
+    forbiddenCopy: ["Twoja prywatność", "Porozmawiajmy", "Często zadawane pytania", "Włącz interaktywną mapę", "Ustawienia prywatności"],
+  },
+  {
+    code: "de",
+    path: "de/",
+    canonical: "https://guziczak.github.io/hul/de/",
+    ogLocale: "de_DE",
+    cookieTitle: "Ihre Privatsphäre",
+    menuClose: "Menü schließen",
+    mapTitle: "Interaktive Google-Karte",
+    mapStatus: "wurde aktiviert",
+    forbiddenCopy: ["Twoja prywatność", "Porozmawiajmy", "Często zadawane pytania", "Włącz interaktywną mapę", "Ustawienia prywatności"],
+  },
+];
+const productionAlternates = {
+  pl: "https://guziczak.github.io/hul/",
+  en: "https://guziczak.github.io/hul/en/",
+  de: "https://guziczak.github.io/hul/de/",
+  "x-default": "https://guziczak.github.io/hul/",
+};
+const productionPageUrls = [...new Set(Object.values(productionAlternates))];
+const localLanguageTargets = {
+  pl: new URL("./", baseUrl).href,
+  en: new URL("en/", baseUrl).href,
+  de: new URL("de/", baseUrl).href,
+};
+
+for (const localized of localizedPages) {
+  const localizedContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await localizedContext.route("https://maps.google.com/**", (route) => route.fulfill({
+    status: 200,
+    contentType: "text/html",
+    body: "<!doctype html><title>Google Maps test</title>",
+  }));
+  const localizedPage = await localizedContext.newPage();
+  const localizedConsoleErrors = [];
+  const localizedFailedRequests = [];
+  localizedPage.on("console", (message) => {
+    if (message.type() === "error") localizedConsoleErrors.push(message.text());
+  });
+  localizedPage.on("requestfailed", (request) => {
+    if (request.failure()?.errorText === "net::ERR_ABORTED") return;
+    localizedFailedRequests.push(`${request.url()} — ${request.failure()?.errorText}`);
+  });
+
+  const localizedResponse = await localizedPage.goto(new URL(localized.path, baseUrl).href, { waitUntil: "networkidle" });
+  await localizedPage.evaluate(() => document.fonts.ready);
+  await localizedPage.waitForTimeout(250);
+  const localizedState = await localizedPage.evaluate(() => {
+    const schema = JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent || "{}");
+    const schemaGraph = schema["@graph"] || [schema];
+    const schemaPage = schemaGraph.find((entry) => entry["@type"] === "WebPage") || {};
+    const schemaSite = schemaGraph.find((entry) => entry["@type"] === "WebSite") || {};
+    const alternates = Object.fromEntries(
+      [...document.querySelectorAll('link[rel="alternate"][hreflang]')]
+        .map((link) => [link.getAttribute("hreflang"), link.getAttribute("href")]),
+    );
+    const assetValues = [...document.querySelectorAll('link[rel="stylesheet"], link[rel="icon"], script[src], img[src], source[src], source[srcset]')]
+      .flatMap((element) => [element.getAttribute("href"), element.getAttribute("src"), element.getAttribute("srcset")])
+      .filter(Boolean);
+    const ids = [...document.querySelectorAll("[id]")].map((element) => element.id);
+    return {
+      lang: document.documentElement.lang,
+      h1: document.querySelectorAll("h1").length,
+      sections: document.querySelectorAll("main section").length,
+      canonical: document.querySelector('link[rel="canonical"]')?.getAttribute("href"),
+      ogLocale: document.querySelector('meta[property="og:locale"]')?.content,
+      alternates,
+      schemaUrl: schemaPage.url,
+      schemaPageLanguage: schemaPage.inLanguage,
+      schemaLanguages: schemaSite.inLanguage,
+      currentSwitchers: document.querySelectorAll('.language-switcher a[aria-current="page"]').length,
+      desktopSwitchTargets: Object.fromEntries(
+        [...document.querySelectorAll(".language-switcher--desktop a")]
+          .map((link) => [link.hreflang, link.href]),
+      ),
+      hasMobileSwitcher: Boolean(document.querySelector(".language-switcher--mobile")),
+      assetsAreParentRelative: assetValues.every((value) => value.startsWith("../")),
+      duplicateIds: ids.length - new Set(ids).size,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      cookieTitle: document.querySelector(".cookie-banner__copy strong")?.textContent.trim(),
+      bodyText: document.body.innerText,
+      mapLanguage: new URL(document.querySelector("[data-contact-map]")?.dataset.mapUrl).searchParams.get("hl"),
+      externalRequests: performance.getEntriesByType("resource")
+        .map((entry) => entry.name)
+        .filter((url) => !url.startsWith(location.origin)),
+    };
+  });
+
+  assert(localizedResponse?.ok(), `${localized.code.toUpperCase()} static document returns HTTP 200`);
+  assert(localizedState.lang === localized.code && localizedState.h1 === 1 && localizedState.sections === 8, `${localized.code.toUpperCase()} declares its language and preserves the complete semantic structure`);
+  assert(localizedState.canonical === localized.canonical && localizedState.ogLocale === localized.ogLocale, `${localized.code.toUpperCase()} has its own canonical and Open Graph locale`);
+  assert(Object.entries(productionAlternates).every(([language, href]) => localizedState.alternates[language] === href), `${localized.code.toUpperCase()} exposes reciprocal pl/en/de/x-default hreflang links`);
+  assert(localizedState.schemaUrl === localized.canonical && localizedState.schemaPageLanguage === localized.code && ["pl", "en", "de"].every((language) => localizedState.schemaLanguages?.includes(language)), `${localized.code.toUpperCase()} WebPage and WebSite structured data match the localized URL and supported languages`);
+  assert(localizedState.currentSwitchers === 2 && localizedState.hasMobileSwitcher, `${localized.code.toUpperCase()} marks the current language in both desktop and mobile switchers`);
+  assert(Object.entries(localLanguageTargets).every(([language, href]) => localizedState.desktopSwitchTargets[language] === href), `${localized.code.toUpperCase()} language switcher resolves correctly under the GitHub Pages subpath`);
+  assert(localizedState.assetsAreParentRelative && localizedState.duplicateIds === 0, `${localized.code.toUpperCase()} uses safe shared asset paths and unique IDs`);
+  assert(localizedState.overflow === 0 && localizedState.mapLanguage === localized.code, `${localized.code.toUpperCase()} has no desktop overflow and requests the matching map language`);
+  assert(localizedState.cookieTitle === localized.cookieTitle && localized.forbiddenCopy.every((copy) => !localizedState.bodyText.includes(copy)), `${localized.code.toUpperCase()} translates consent and contains no Polish interface-copy leaks`);
+  assert(localizedState.externalRequests.length === 0, `${localized.code.toUpperCase()} makes no third-party request before consent`);
+
+  await localizedPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+  await localizedPage.locator("[data-consent-reject]").click();
+  await localizedPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
+  await localizedPage.setViewportSize({ width: 390, height: 844 });
+  await localizedPage.locator(".menu-toggle").click();
+  await localizedPage.waitForTimeout(620);
+  const localizedMenu = await localizedPage.evaluate(() => ({
+    height: document.querySelector(".header").getBoundingClientRect().height,
+    label: document.querySelector(".menu-toggle").getAttribute("aria-label"),
+    currentVisible: document.querySelector('.language-switcher--mobile a[aria-current="page"]')?.getBoundingClientRect().height > 0,
+  }));
+  assert(localizedMenu.height === 240 && localizedMenu.label === localized.menuClose && localizedMenu.currentVisible, `${localized.code.toUpperCase()} mobile menu localizes its controls and exposes language selection`);
+  await localizedPage.locator(".menu-toggle").click();
+
+  await localizedPage.locator("[data-contact-map]").scrollIntoViewIfNeeded();
+  await localizedPage.locator("[data-enable-map]").click();
+  await localizedPage.locator("[data-privacy-dialog]").waitFor({ state: "visible" });
+  await localizedPage.keyboard.press("Space");
+  await localizedPage.locator("[data-consent-save]").click();
+  await localizedPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
+  const localizedMap = await localizedPage.evaluate(() => ({
+    title: document.querySelector("iframe[data-interactive-map]")?.title,
+    status: document.querySelector("[data-map-status]")?.textContent,
+  }));
+  assert(localizedMap.title?.includes(localized.mapTitle) && localizedMap.status?.includes(localized.mapStatus), `${localized.code.toUpperCase()} JavaScript localizes the interactive map title and live status`);
+  assert(localizedConsoleErrors.length === 0 && localizedFailedRequests.length === 0, `${localized.code.toUpperCase()} runs without console or network errors`);
+  await localizedContext.close();
+}
+
+const [sitemapResponse, robotsResponse, notFoundResponse] = await Promise.all([
+  fetch(new URL("sitemap.xml", baseUrl)),
+  fetch(new URL("robots.txt", baseUrl)),
+  fetch(new URL("404.html", baseUrl)),
+]);
+const [sitemapText, robotsText, notFoundText] = await Promise.all([
+  sitemapResponse.text(),
+  robotsResponse.text(),
+  notFoundResponse.text(),
+]);
+assert(sitemapResponse.ok && productionPageUrls.every((href) => sitemapText.includes(`<loc>${href}</loc>`)), "Sitemap is available and lists all three localized URLs");
+assert(["pl", "en", "de", "x-default"].every((language) => sitemapText.includes(`hreflang="${language}"`)), "Sitemap carries all language relationships");
+assert(robotsResponse.ok && robotsText.includes("Sitemap: https://guziczak.github.io/hul/sitemap.xml"), "Repository robots file points to the multilingual sitemap");
+assert(notFoundResponse.ok && notFoundText.includes('name="robots" content="noindex, follow"') && notFoundText.includes('<base href="/hul/"') && ["./en/", "./de/"].every((href) => notFoundText.includes(`href="${href}"`)), "Custom 404 resolves assets from /hul/, stays noindex and offers English and German recovery links");
 
 const reducedContext = await browser.newContext({
   reducedMotion: "reduce",

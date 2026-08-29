@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f0eee8" />
+    <meta name="robots" content="noindex, follow" />
+    <base href="/hul/" />
+    <link rel="icon" href="./public/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <title>404 — nie znaleziono strony | Hul</title>
+  </head>
+  <body class="error-page">
+    <a class="skip-link" href="#main-content">Przejdź do treści</a>
+    <header class="error-header">
+      <a class="logo" href="./" aria-label="Hul — strona główna">HUL</a>
+      <nav class="language-switcher" aria-label="Wersje językowe strony głównej">
+        <a href="./" lang="pl" hreflang="pl">PL</a>
+        <a href="./en/" lang="en" hreflang="en">EN</a>
+        <a href="./de/" lang="de" hreflang="de">DE</a>
+      </nav>
+    </header>
+
+    <main class="error-content" id="main-content" tabindex="-1">
+      <p class="eyebrow">404</p>
+      <h1>Ta strona nie istnieje.</h1>
+      <div class="error-content__translations">
+        <p>Wróć do strony głównej Hul albo wybierz jej wersję językową.</p>
+        <p lang="en">This page does not exist. Return to the Hul home page or choose a language.</p>
+        <p lang="de">Diese Seite existiert nicht. Zurück zur Hul-Startseite oder Sprache wählen.</p>
+      </div>
+      <div class="error-content__actions">
+        <a class="motion-button motion-button--dark" href="./"><span>Strona główna</span></a>
+        <a class="motion-button motion-button--dark" href="./en/" lang="en"><span>English</span></a>
+        <a class="motion-button motion-button--dark" href="./de/" lang="de"><span>Deutsch</span></a>
+      </div>
+    </main>
+  </body>
+</html>
