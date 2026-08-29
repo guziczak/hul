@@ -31,6 +31,11 @@
     <script>
       const earlyRoot = document.documentElement;
       earlyRoot.classList.add("js");
+      if (location.hash === "#top") {
+        earlyRoot.classList.add("initial-top");
+        window.__hulPreviousScrollRestoration = "scrollRestoration" in history ? history.scrollRestoration : "auto";
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      }
       try {
         const earlyConsent = JSON.parse(localStorage.getItem("hul:privacy-consent:v1"));
         const hasSavedConsent = earlyConsent?.version === 1

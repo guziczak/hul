@@ -8,6 +8,41 @@ const heroMedia = document.querySelector(".hero__media");
 const heroImage = heroMedia?.querySelector("[data-hero-image]");
 const pageContent = document.querySelector(".page-content");
 const interfaceLanguage = document.documentElement.lang.toLowerCase().split("-")[0];
+let initialTopLock = root.classList.contains("initial-top");
+
+function pinRequestedTop() {
+  if (location.hash === "#top") window.scrollTo(0, 0);
+}
+
+function releaseInitialTopLock() {
+  pinRequestedTop();
+  if (!initialTopLock) {
+    root.classList.remove("initial-top");
+    return;
+  }
+  initialTopLock = false;
+  root.classList.remove("initial-top");
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = window.__hulPreviousScrollRestoration || "auto";
+  }
+}
+
+if (initialTopLock) {
+  pinRequestedTop();
+  document.addEventListener("DOMContentLoaded", pinRequestedTop, { once: true });
+  window.addEventListener("load", pinRequestedTop, { once: true });
+}
+
+window.addEventListener("pageshow", () => {
+  if (location.hash !== "#top") return;
+  root.classList.add("initial-top");
+  pinRequestedTop();
+  requestAnimationFrame(() => {
+    pinRequestedTop();
+    requestAnimationFrame(releaseInitialTopLock);
+  });
+});
+
 const interfaceCopy = {
   pl: {
     menuOpen: "Otwórz menu",

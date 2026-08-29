@@ -74,6 +74,10 @@ html:root {
   background: var(--ink);
 }
 
+html:root.initial-top {
+  scroll-behavior: auto;
+}
+
 body {
   margin: 0;
   min-width: 320px;

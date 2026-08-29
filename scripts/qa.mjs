@@ -356,6 +356,46 @@ await page.locator(".header__top > .logo").click();
 await page.waitForFunction(() => window.scrollY <= 1);
 assert(await page.evaluate(() => window.scrollY <= 1 && location.hash === "#top"), "Clicking the upper-left HUL logo returns to the document top");
 
+const topReloadContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+await topReloadContext.addInitScript(() => {
+  localStorage.setItem("hul:privacy-consent:v1", JSON.stringify({ version: 1, analytics: false, maps: false }));
+});
+const topReloadPage = await topReloadContext.newPage();
+const topUrl = new URL(baseUrl);
+topUrl.hash = "top";
+await topReloadPage.goto(topUrl.href, { waitUntil: "networkidle" });
+await topReloadPage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  document.querySelector(".about").scrollIntoView();
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+const topReloadStart = await topReloadPage.evaluate(() => scrollY);
+await topReloadPage.reload({ waitUntil: "domcontentloaded" });
+const topReloadPositions = [await topReloadPage.evaluate(() => scrollY)];
+for (const delay of [50, 150, 400]) {
+  await topReloadPage.waitForTimeout(delay);
+  topReloadPositions.push(await topReloadPage.evaluate(() => scrollY));
+}
+const topReloadState = await topReloadPage.evaluate(() => ({
+  lock: document.documentElement.classList.contains("initial-top"),
+  restoration: history.scrollRestoration,
+}));
+assert(topReloadStart > 900 && topReloadPositions.every((position) => position <= 1), "Reloading a #top URL appears at the hero immediately without a restoration scroll");
+assert(!topReloadState.lock && topReloadState.restoration === "auto", "Initial #top locking releases after pageshow and restores normal browser history behavior");
+
+await topReloadPage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  document.querySelector(".about").scrollIntoView();
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+const smoothTopStart = await topReloadPage.evaluate(() => scrollY);
+await topReloadPage.locator(".header__top > .logo").click();
+await topReloadPage.waitForTimeout(120);
+const smoothTopMiddle = await topReloadPage.evaluate(() => scrollY);
+await topReloadPage.waitForFunction(() => scrollY <= 1);
+assert(smoothTopMiddle > 1 && smoothTopMiddle < smoothTopStart, "Later logo clicks retain the intended smooth return-to-top motion");
+await topReloadContext.close();
+
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
