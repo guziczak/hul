@@ -2443,7 +2443,7 @@ body.privacy-open {
 
   .hero-spacer {
     height: 100vh;
-    height: 100lvh;
+    height: 100dvh;
     min-height: 680px;
   }
 
@@ -2909,13 +2909,6 @@ body.privacy-open {
 
   .hero__media {
     min-height: 0;
-  }
-}
-
-@media (max-width: 809px) and (max-height: 719px) {
-  .hero-spacer {
-    height: 100vh;
-    height: 100lvh;
   }
 }
 
