@@ -198,14 +198,27 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
   const content = document.querySelector(".hero__content").getBoundingClientRect();
   const actions = document.querySelector(".hero__actions").getBoundingClientRect();
   const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  const topAction = document.querySelector("[data-scroll-top]").getBoundingClientRect();
+  const phoneLabel = document.querySelector(".quick-action--phone .quick-action__tooltip");
   return {
     headerGap: content.top - header.bottom,
     bannerGap: banner.top - actions.bottom,
     actionsBottom: actions.bottom,
+    phoneWidth: phone.width,
+    phoneHeight: phone.height,
+    phoneRight: phone.right,
+    phoneBannerGap: banner.top - phone.bottom,
+    phoneRightGap: Math.abs(banner.right - phone.right),
+    topRightGap: Math.abs(topAction.right - phone.right),
+    phoneLabelVisible: getComputedStyle(phoneLabel).opacity === "1"
+      && getComputedStyle(phoneLabel).position === "static",
   };
 });
 assert(desktopHeroConsentLayout.headerGap >= 19 && desktopHeroConsentLayout.bannerGap >= 19, "The desktop hero content stays between the header and an undecided consent prompt");
 assert(Math.abs(desktopHeroConsentLayout.actionsBottom - desktop.heroActionsBottom) <= 0.5, "Showing the consent prompt does not move hero content");
+assert(desktopHeroConsentLayout.phoneWidth >= 120 && desktopHeroConsentLayout.phoneHeight === 48 && desktopHeroConsentLayout.phoneLabelVisible, "Desktop presents the permanent phone as a readable oak call capsule");
+assert(desktopHeroConsentLayout.phoneRightGap <= 0.5 && desktopHeroConsentLayout.topRightGap <= 0.5 && desktopHeroConsentLayout.phoneBannerGap >= 11, "Desktop floating actions align with the consent rail and remain directly above it");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
@@ -248,11 +261,13 @@ const rejectedPrivacy = await page.evaluate(() => ({
   heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
   heroOccluded: document.querySelector(".hero").classList.contains("hero--occluded"),
   heroMediaVisibility: getComputedStyle(document.querySelector(".hero__media")).visibility,
+  phoneRight: document.querySelector(".quick-action--phone").getBoundingClientRect().right,
 }));
 assert(rejectedPrivacy.consent?.version === 1 && !rejectedPrivacy.consent.analytics && !rejectedPrivacy.consent.maps, "Rejecting optional services stores an explicit category-level decision");
 assert(!rejectedPrivacy.heroOccluded && rejectedPrivacy.heroMediaVisibility === "visible", "Returning to the top restores the opening hero after its bottom-overscroll guard");
 assert(!rejectedPrivacy.iframe && !rejectedPrivacy.analytics, "Rejecting optional services leaves Google resources unloaded");
 assert(!rejectedPrivacy.consentPending && rejectedPrivacy.heroContentBottom === 112 && rejectedPrivacy.heroActionsBottom > desktop.heroActionsBottom + 21, "Hiding consent moves hero once to its fixed normal position");
+assert(Math.abs(rejectedPrivacy.phoneRight - desktopHeroConsentLayout.phoneRight) <= 0.5, "The desktop phone keeps its content-rail alignment after the consent prompt closes");
 await page.reload({ waitUntil: "networkidle" });
 await page.evaluate(() => document.fonts.ready);
 await page.waitForTimeout(250);
@@ -375,11 +390,38 @@ let mobileState = await page.evaluate(() => ({
   menuInert: document.querySelector(".header__mobile-links").inert,
   menuHidden: document.querySelector(".header__mobile-links").getAttribute("aria-hidden"),
   heroImage: document.querySelector(".hero__media img").currentSrc,
+  phoneWidth: document.querySelector(".quick-action--phone").getBoundingClientRect().width,
+  phoneLabelDisplay: getComputedStyle(document.querySelector(".quick-action--phone .quick-action__tooltip")).display,
 }));
 assert(mobileState.ctaLines === 3, "Mobile CTA keeps the target three-line split after resize");
 assert(mobileState.overflow === 0, "Mobile has no horizontal overflow");
 assert(mobileState.menuInert && mobileState.menuHidden === "true", "Closed mobile navigation is removed from focus order");
 assert(mobileState.heroImage.includes("hero-mobile"), "Mobile loads the dedicated hero crop");
+assert(mobileState.phoneWidth === 48 && mobileState.phoneLabelDisplay === "none", "Mobile keeps the compact thumb-friendly phone icon");
+
+const stableMobileHeroCrop = await page.evaluate(() => {
+  const hero = document.querySelector(".hero");
+  const media = document.querySelector(".hero__media");
+  const image = document.querySelector(".hero__media img");
+  const initialMediaHeight = media.getBoundingClientRect().height;
+  const initialHeroHeight = hero.getBoundingClientRect().height;
+  hero.style.height = `${initialHeroHeight - 96}px`;
+  const shortenedHeroHeight = hero.getBoundingClientRect().height;
+  const shortenedMediaHeight = media.getBoundingClientRect().height;
+  hero.style.removeProperty("height");
+  return {
+    initialMediaHeight,
+    shortenedHeroHeight,
+    shortenedMediaHeight,
+    imageTransform: getComputedStyle(image).transform,
+  };
+});
+assert(
+  Math.abs(stableMobileHeroCrop.initialMediaHeight - stableMobileHeroCrop.shortenedMediaHeight) <= 0.5
+    && stableMobileHeroCrop.shortenedMediaHeight > stableMobileHeroCrop.shortenedHeroHeight + 90
+    && stableMobileHeroCrop.imageTransform === "none",
+  "Mobile browser-chrome height changes reveal a stable hero crop instead of rescaling the image",
+);
 
 await page.locator(".menu-toggle").click();
 await page.waitForTimeout(620);
@@ -408,11 +450,17 @@ await page.setViewportSize({ width: 1440, height: 900 });
 await page.waitForTimeout(220);
 assert(!(await page.locator(".header").evaluate((header) => header.classList.contains("header--open"))), "Desktop resize clears the mobile menu state");
 
-for (const width of [320, 431, 768, 810, 1200, 1664, 1920]) {
+for (const width of [320, 431, 768, 810, 1199, 1200, 1664, 1920]) {
   await page.setViewportSize({ width, height: 900 });
   await page.waitForTimeout(width === 320 ? 520 : 220);
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  assert(overflow === 0, `No horizontal overflow at ${width}px`);
+  const responsiveLayout = await page.evaluate(() => ({
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    phoneWidth: document.querySelector(".quick-action--phone").getBoundingClientRect().width,
+    phoneLabelOpacity: getComputedStyle(document.querySelector(".quick-action--phone .quick-action__tooltip")).opacity,
+  }));
+  assert(responsiveLayout.overflow === 0, `No horizontal overflow at ${width}px`);
+  if (width === 1199) assert(responsiveLayout.phoneWidth === 48, "Phone remains a compact icon immediately below the desktop breakpoint");
+  if (width === 1200) assert(responsiveLayout.phoneWidth >= 120 && responsiveLayout.phoneLabelOpacity === "1", "Phone becomes a labelled capsule exactly at the desktop breakpoint");
   if (width === 320) {
     const hero = await page.evaluate(() => {
       const heading = document.querySelector(".hero h1");
@@ -831,6 +879,10 @@ for (const localized of localizedPages) {
     const ctaRect = cta.getBoundingClientRect();
     const linksRect = desktopLinks.getBoundingClientRect();
     const trackRect = track.getBoundingClientRect();
+    const phone = document.querySelector(".quick-action--phone");
+    const phoneRect = phone.getBoundingClientRect();
+    const phoneLabel = phone.querySelector(".quick-action__tooltip");
+    const phoneLabelStyle = getComputedStyle(phoneLabel);
     return {
       lang: document.documentElement.lang,
       h1: document.querySelectorAll("h1").length,
@@ -865,6 +917,13 @@ for (const localized of localizedPages) {
           return rect.bottom > trackRect.top + 0.5 && rect.top < trackRect.bottom - 0.5;
         }).length,
       },
+      phoneLayout: {
+        width: phoneRect.width,
+        height: phoneRect.height,
+        label: phoneLabel.textContent.trim(),
+        labelOpacity: phoneLabelStyle.opacity,
+        labelLines: Math.round(phoneLabel.getBoundingClientRect().height / parseFloat(phoneLabelStyle.lineHeight)),
+      },
     };
   });
 
@@ -878,6 +937,7 @@ for (const localized of localizedPages) {
   assert(localizedState.assetsAreParentRelative && localizedState.duplicateIds === 0, `${localized.code.toUpperCase()} uses safe shared asset paths and unique IDs`);
   assert(localizedState.overflow === 0 && localizedState.mapLanguage === localized.code, `${localized.code.toUpperCase()} has no desktop overflow and requests the matching map language`);
   assert(localizedState.utilityLayout.grouped && localizedState.utilityLayout.controlGap >= 7 && localizedState.utilityLayout.navigationGap >= 24 && localizedState.utilityLayout.visibleTrackLabels === 1, `${localized.code.toUpperCase()} utility controls stay composed without duplicate visible CTA copy at 1200px`);
+  assert(localizedState.phoneLayout.width >= 120 && localizedState.phoneLayout.height === 48 && localizedState.phoneLayout.label && localizedState.phoneLayout.labelOpacity === "1" && localizedState.phoneLayout.labelLines === 1, `${localized.code.toUpperCase()} desktop phone capsule keeps its localized label on one line`);
   assert(localizedState.cookieTitle === localized.cookieTitle && localized.forbiddenCopy.every((copy) => !localizedState.bodyText.includes(copy)), `${localized.code.toUpperCase()} translates consent and contains no Polish interface-copy leaks`);
   assert(localizedState.externalRequests.length === 0, `${localized.code.toUpperCase()} makes no third-party request before consent`);
 
