@@ -98,6 +98,28 @@ const desktop = await page.evaluate(() => ({
     background: getComputedStyle(document.querySelector(".header")).backgroundColor,
     blur: getComputedStyle(document.querySelector(".header")).backdropFilter,
   },
+  headerUtilities: (() => {
+    const utilities = document.querySelector(".header__utilities");
+    const switcher = utilities.querySelector(".language-switcher--desktop");
+    const cta = utilities.querySelector(".motion-button");
+    const desktopLinks = document.querySelector(".header__desktop-links");
+    const track = cta.querySelector(".motion-button__track");
+    const utilitiesRect = utilities.getBoundingClientRect();
+    const switcherRect = switcher.getBoundingClientRect();
+    const ctaRect = cta.getBoundingClientRect();
+    const linksRect = desktopLinks.getBoundingClientRect();
+    const trackRect = track.getBoundingClientRect();
+    return {
+      grouped: switcher.parentElement === utilities && cta.parentElement === utilities,
+      controlGap: ctaRect.left - switcherRect.right,
+      navigationGap: utilitiesRect.left - linksRect.right,
+      activeBackground: getComputedStyle(switcher.querySelector('[aria-current="page"]')).backgroundColor,
+      visibleTrackLabels: [...track.children].filter((label) => {
+        const rect = label.getBoundingClientRect();
+        return rect.bottom > trackRect.top + 0.5 && rect.top < trackRect.bottom - 0.5;
+      }).length,
+    };
+  })(),
   heroMedia: {
     decoded: document.querySelector(".hero__media").classList.contains("is-decoded"),
     currentSrc: document.querySelector("[data-hero-image]").currentSrc,
@@ -149,6 +171,8 @@ assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data conta
 assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desktop.schemaModel.pageLanguage === "pl" && ["pl", "en", "de"].every((language) => desktop.schemaModel.siteLanguages?.includes(language)), "Polish WebPage and multilingual WebSite structured data are linked correctly");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
+assert(desktop.headerUtilities.grouped && desktop.headerUtilities.controlGap >= 7 && desktop.headerUtilities.navigationGap >= 32, "Desktop languages and CTA form one spaced utility group clear of the centered navigation");
+assert(desktop.headerUtilities.activeBackground !== "rgba(0, 0, 0, 0)" && desktop.headerUtilities.visibleTrackLabels === 1, "The segmented language control marks the current locale and the animated CTA shows one resting label");
 assert(desktop.heroMedia.decoded && desktop.heroMedia.currentSrc.includes(".webp") && desktop.heroMedia.opacity === "1", "The hero reveals a fully decoded modern image rather than streaming partial pixels");
 assert(desktop.heroMedia.filter === "none" && desktop.heroMedia.transform === "none" && desktop.heroMedia.pictureDisplay === "block" && desktop.heroMedia.shade === "rgba(0, 0, 0, 0.35)", "The hero avoids the filtered transformed image layer that clips in mobile WebKit");
 assert(!desktop.heroLayer.occluded && desktop.heroLayer.position === "fixed" && desktop.heroLayer.mediaVisibility === "visible", "The opening hero remains fully visible and fixed in its active scene");
@@ -764,7 +788,7 @@ const localLanguageTargets = {
 };
 
 for (const localized of localizedPages) {
-  const localizedContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const localizedContext = await browser.newContext({ viewport: { width: 1200, height: 800 } });
   await localizedContext.route("https://maps.google.com/**", (route) => route.fulfill({
     status: 200,
     contentType: "text/html",
@@ -797,6 +821,16 @@ for (const localized of localizedPages) {
       .flatMap((element) => [element.getAttribute("href"), element.getAttribute("src"), element.getAttribute("srcset")])
       .filter(Boolean);
     const ids = [...document.querySelectorAll("[id]")].map((element) => element.id);
+    const utilities = document.querySelector(".header__utilities");
+    const switcher = utilities.querySelector(".language-switcher--desktop");
+    const cta = utilities.querySelector(".motion-button");
+    const desktopLinks = document.querySelector(".header__desktop-links");
+    const track = cta.querySelector(".motion-button__track");
+    const utilitiesRect = utilities.getBoundingClientRect();
+    const switcherRect = switcher.getBoundingClientRect();
+    const ctaRect = cta.getBoundingClientRect();
+    const linksRect = desktopLinks.getBoundingClientRect();
+    const trackRect = track.getBoundingClientRect();
     return {
       lang: document.documentElement.lang,
       h1: document.querySelectorAll("h1").length,
@@ -822,6 +856,15 @@ for (const localized of localizedPages) {
       externalRequests: performance.getEntriesByType("resource")
         .map((entry) => entry.name)
         .filter((url) => !url.startsWith(location.origin)),
+      utilityLayout: {
+        grouped: switcher.parentElement === utilities && cta.parentElement === utilities,
+        controlGap: ctaRect.left - switcherRect.right,
+        navigationGap: utilitiesRect.left - linksRect.right,
+        visibleTrackLabels: [...track.children].filter((label) => {
+          const rect = label.getBoundingClientRect();
+          return rect.bottom > trackRect.top + 0.5 && rect.top < trackRect.bottom - 0.5;
+        }).length,
+      },
     };
   });
 
@@ -834,6 +877,7 @@ for (const localized of localizedPages) {
   assert(Object.entries(localLanguageTargets).every(([language, href]) => localizedState.desktopSwitchTargets[language] === href), `${localized.code.toUpperCase()} language switcher resolves correctly under the GitHub Pages subpath`);
   assert(localizedState.assetsAreParentRelative && localizedState.duplicateIds === 0, `${localized.code.toUpperCase()} uses safe shared asset paths and unique IDs`);
   assert(localizedState.overflow === 0 && localizedState.mapLanguage === localized.code, `${localized.code.toUpperCase()} has no desktop overflow and requests the matching map language`);
+  assert(localizedState.utilityLayout.grouped && localizedState.utilityLayout.controlGap >= 7 && localizedState.utilityLayout.navigationGap >= 24 && localizedState.utilityLayout.visibleTrackLabels === 1, `${localized.code.toUpperCase()} utility controls stay composed without duplicate visible CTA copy at 1200px`);
   assert(localizedState.cookieTitle === localized.cookieTitle && localized.forbiddenCopy.every((copy) => !localizedState.bodyText.includes(copy)), `${localized.code.toUpperCase()} translates consent and contains no Polish interface-copy leaks`);
   assert(localizedState.externalRequests.length === 0, `${localized.code.toUpperCase()} makes no third-party request before consent`);
 
