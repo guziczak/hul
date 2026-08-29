@@ -260,6 +260,8 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
     headerGap: content.top - header.bottom,
     bannerGap: banner.top - actions.bottom,
     actionsBottom: actions.bottom,
+    phoneHeroTopGap: Math.abs(phone.top - actions.top),
+    phoneHeroBottomGap: Math.abs(phone.bottom - actions.bottom),
     phoneWidth: phone.width,
     phoneHeight: phone.height,
     phoneRight: phone.right,
@@ -273,6 +275,7 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
 assert(desktopHeroConsentLayout.headerGap >= 19 && desktopHeroConsentLayout.bannerGap >= 19, "The desktop hero content stays between the header and an undecided consent prompt");
 assert(Math.abs(desktopHeroConsentLayout.actionsBottom - desktop.heroActionsBottom) <= 0.5, "Showing the consent prompt does not move hero content");
 assert(desktopHeroConsentLayout.phoneWidth >= 120 && desktopHeroConsentLayout.phoneHeight === 48 && desktopHeroConsentLayout.phoneLabelVisible, "Desktop presents the permanent phone as a readable oak call capsule");
+assert(desktopHeroConsentLayout.phoneHeroTopGap <= 0.5 && desktopHeroConsentLayout.phoneHeroBottomGap <= 0.5, "Desktop phone aligns vertically with the opening hero actions while consent is pending");
 assert(desktopHeroConsentLayout.phoneRightGap <= 0.5 && desktopHeroConsentLayout.phoneBannerGap >= 11, "Desktop phone aligns with the consent rail and remains directly above it");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
@@ -307,21 +310,28 @@ await page.evaluate(() => {
 await cookieBanner.locator("[data-consent-reject]").click();
 await cookieBanner.waitFor({ state: "hidden" });
 await page.waitForTimeout(450);
-const rejectedPrivacy = await page.evaluate(() => ({
-  consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
-  iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
-  analytics: Boolean(document.querySelector("script[data-hul-analytics]")),
-  consentPending: document.documentElement.classList.contains("consent-pending"),
-  heroContentBottom: parseFloat(getComputedStyle(document.querySelector(".hero__content")).bottom),
-  heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
-  heroOccluded: document.querySelector(".hero").classList.contains("hero--occluded"),
-  heroMediaVisibility: getComputedStyle(document.querySelector(".hero__media")).visibility,
-  phoneRight: document.querySelector(".quick-action--phone").getBoundingClientRect().right,
-}));
+const rejectedPrivacy = await page.evaluate(() => {
+  const heroActions = document.querySelector(".hero__actions").getBoundingClientRect();
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  return {
+    consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
+    iframe: Boolean(document.querySelector("iframe[data-interactive-map]")),
+    analytics: Boolean(document.querySelector("script[data-hul-analytics]")),
+    consentPending: document.documentElement.classList.contains("consent-pending"),
+    heroContentBottom: parseFloat(getComputedStyle(document.querySelector(".hero__content")).bottom),
+    heroActionsBottom: heroActions.bottom,
+    heroOccluded: document.querySelector(".hero").classList.contains("hero--occluded"),
+    heroMediaVisibility: getComputedStyle(document.querySelector(".hero__media")).visibility,
+    phoneRight: phone.right,
+    phoneHeroTopGap: Math.abs(phone.top - heroActions.top),
+    phoneHeroBottomGap: Math.abs(phone.bottom - heroActions.bottom),
+  };
+});
 assert(rejectedPrivacy.consent?.version === 1 && !rejectedPrivacy.consent.analytics && !rejectedPrivacy.consent.maps, "Rejecting optional services stores an explicit category-level decision");
 assert(!rejectedPrivacy.heroOccluded && rejectedPrivacy.heroMediaVisibility === "visible", "Returning to the top restores the opening hero after its bottom-overscroll guard");
 assert(!rejectedPrivacy.iframe && !rejectedPrivacy.analytics, "Rejecting optional services leaves Google resources unloaded");
 assert(!rejectedPrivacy.consentPending && rejectedPrivacy.heroContentBottom === 112 && rejectedPrivacy.heroActionsBottom > desktop.heroActionsBottom + 21, "Hiding consent moves hero once to its fixed normal position");
+assert(rejectedPrivacy.phoneHeroTopGap <= 0.5 && rejectedPrivacy.phoneHeroBottomGap <= 0.5, "Desktop phone stays vertically aligned with hero actions after the consent prompt closes");
 assert(Math.abs(rejectedPrivacy.phoneRight - desktopHeroConsentLayout.phoneRight) <= 0.5, "The desktop phone keeps its content-rail alignment after the consent prompt closes");
 await page.reload({ waitUntil: "networkidle" });
 await page.evaluate(() => document.fonts.ready);

@@ -290,6 +290,8 @@ function splitHeading(heading) {
 
   heading.dataset.revealText = text;
   heading.setAttribute("aria-label", text);
+  const revealContainer = heading.closest(".reveal");
+  revealContainer?.classList.add("reveal--chars");
   heading.textContent = "";
 
   lines.forEach((lineWords, lineIndex) => {
@@ -327,7 +329,6 @@ function splitHeading(heading) {
     wordElement.style.setProperty("--line-delay", `${lineIndex * 100}ms`);
   });
   heading.dataset.revealLines = String(lineTops.length);
-  heading.closest(".reveal")?.classList.add("reveal--chars");
 
   const headingHero = heading.closest(".hero");
   if (headingHero) {
@@ -355,7 +356,12 @@ document.fonts.ready.then(() => {
 
   document.querySelectorAll(".reveal").forEach((element) => {
     if (element.closest(".hero")) {
-      requestAnimationFrame(() => element.classList.add("is-visible"));
+      // Keep one painted frame between splitting the heading and starting the
+      // hero sequence, otherwise dynamically inserted characters skip their
+      // initial translated state in fast browsers.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => element.classList.add("is-visible"));
+      });
       return;
     }
     revealObserver.observe(element);
@@ -543,6 +549,16 @@ function syncFloatingUiOffsets() {
         requestedQuickActionsBottom = Math.max(
           requestedQuickActionsBottom,
           window.innerHeight - heroActionsTargetTop + 12,
+        );
+      }
+
+      // On wide screens the phone belongs visually to the hero action row.
+      // Keep its horizontal content-rail alignment, but match the buttons'
+      // vertical position while the opening hero is still on screen.
+      if (window.innerWidth >= 1200) {
+        requestedQuickActionsBottom = Math.max(
+          requestedQuickActionsBottom,
+          window.innerHeight - heroActionsTargetBottom,
         );
       }
     }
