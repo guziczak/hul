@@ -87,6 +87,61 @@ heroImage?.addEventListener("load", revealDecodedHero);
 heroImage?.addEventListener("error", () => heroMedia?.classList.remove("is-decoded"));
 revealDecodedHero();
 
+const mobileHeroViewport = window.matchMedia("(max-width: 809px)");
+let stableHeroMediaWidth = 0;
+let heroMediaResizeFrame = 0;
+
+function lockMobileHeroMediaHeight(force = false) {
+  if (!heroMedia) return;
+
+  const layoutWidth = Math.round(root.clientWidth);
+  const portrait = window.innerHeight >= window.innerWidth;
+  if (!mobileHeroViewport.matches || !portrait) {
+    stableHeroMediaWidth = 0;
+    heroMedia.style.removeProperty("--hero-media-height");
+    return;
+  }
+  // Collapsing mobile browser chrome changes only the viewport height. Keep
+  // the existing pixel crop until a real width/orientation change occurs.
+  if (!force && Math.abs(layoutWidth - stableHeroMediaWidth) < 1) return;
+
+  stableHeroMediaWidth = layoutWidth;
+  heroMedia.style.removeProperty("--hero-media-height");
+
+  const cssLargeViewportHeight = heroMedia.getBoundingClientRect().height;
+  const visibleViewportHeight = window.visualViewport?.height || window.innerHeight;
+  const touchLikeDevice = window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+  const screenWidth = Math.min(window.screen.width, window.screen.height);
+  const screenHeight = Math.max(window.screen.width, window.screen.height);
+  const projectedScreenHeight = screenWidth > 0
+    ? screenHeight * (layoutWidth / screenWidth)
+    : 0;
+  // The full iPhone screen includes persistent safe-area UI. A 1.95 ratio
+  // matches the largest usable Safari viewport without over-zooming the crop.
+  const projectedSafeViewportHeight = Math.min(projectedScreenHeight, layoutWidth * 1.95);
+  const largeUnitLooksDynamic = Math.abs(cssLargeViewportHeight - visibleViewportHeight) <= 4;
+  const hasCollapsibleBrowserChrome = projectedScreenHeight - visibleViewportHeight >= 48;
+
+  // Some iOS WebViews expose 100lvh as the current small viewport. In that
+  // case reserve the large safe viewport before the toolbar starts moving.
+  const stableHeight = touchLikeDevice && largeUnitLooksDynamic && hasCollapsibleBrowserChrome
+    ? Math.max(cssLargeViewportHeight, projectedSafeViewportHeight)
+    : cssLargeViewportHeight;
+
+  heroMedia.style.setProperty("--hero-media-height", `${Math.ceil(stableHeight)}px`);
+}
+
+function requestHeroMediaHeightLock() {
+  if (heroMediaResizeFrame) return;
+  heroMediaResizeFrame = requestAnimationFrame(() => {
+    heroMediaResizeFrame = 0;
+    lockMobileHeroMediaHeight();
+  });
+}
+
+lockMobileHeroMediaHeight(true);
+window.addEventListener("resize", requestHeroMediaHeightLock, { passive: true });
+
 function setMenu(open) {
   header.classList.toggle("header--open", open);
   document.body.classList.toggle("menu-open", open);

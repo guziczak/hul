@@ -1,4 +1,4 @@
-import { chromium } from "playwright-core";
+import { chromium, devices } from "playwright-core";
 
 const browser = await chromium.launch({
   executablePath: "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
@@ -667,6 +667,67 @@ assert(
   "The mobile hero fills an iPhone 15 Pro Max viewport without a bottom strip",
 );
 await iphoneContext.close();
+
+const dynamicIphoneContext = await browser.newContext(devices["iPhone 15 Pro Max"]);
+await dynamicIphoneContext.addInitScript(() => {
+  localStorage.setItem("hul:privacy-consent:v1", JSON.stringify({ version: 1, analytics: false, maps: false }));
+});
+const dynamicIphonePage = await dynamicIphoneContext.newPage();
+await dynamicIphonePage.goto(baseUrl, { waitUntil: "networkidle" });
+const dynamicHeroStates = [];
+for (const viewportHeight of [739, 789, 839, 739]) {
+  if (viewportHeight !== 739 || dynamicHeroStates.length) {
+    await dynamicIphonePage.evaluate(() => scrollTo(0, 12));
+    await dynamicIphonePage.setViewportSize({ width: 430, height: viewportHeight });
+  }
+  await dynamicIphonePage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  dynamicHeroStates.push(await dynamicIphonePage.evaluate(() => {
+    const hero = document.querySelector(".hero").getBoundingClientRect();
+    const media = document.querySelector(".hero__media");
+    const mediaRect = media.getBoundingClientRect();
+    const image = media.querySelector("img");
+    return {
+      viewportHeight: innerHeight,
+      heroHeight: hero.height,
+      mediaHeight: mediaRect.height,
+      lockedHeight: media.style.getPropertyValue("--hero-media-height"),
+      currentSrc: image.currentSrc,
+      imageTransform: getComputedStyle(image).transform,
+    };
+  }));
+}
+const dynamicMediaHeights = dynamicHeroStates.map((state) => state.mediaHeight);
+assert(
+  Math.max(...dynamicMediaHeights) - Math.min(...dynamicMediaHeights) <= 0.5
+    && Math.max(...dynamicHeroStates.map((state) => state.heroHeight)) - Math.min(...dynamicHeroStates.map((state) => state.heroHeight)) >= 90
+    && dynamicHeroStates.every((state) => state.mediaHeight + 0.5 >= state.heroHeight && state.lockedHeight.endsWith("px") && state.currentSrc === dynamicHeroStates[0].currentSrc && state.imageTransform === "none"),
+  "iPhone browser-chrome height changes keep one pixel-locked hero crop without source or transform jumps",
+);
+await dynamicIphonePage.setViewportSize({ width: 390, height: 844 });
+await dynamicIphonePage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+const widthChangedHero = await dynamicIphonePage.evaluate(() => ({
+  mediaHeight: document.querySelector(".hero__media").getBoundingClientRect().height,
+  viewportHeight: innerHeight,
+  overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+}));
+assert(
+  Math.abs(widthChangedHero.mediaHeight - widthChangedHero.viewportHeight) <= 1 && widthChangedHero.overflow === 0,
+  "The mobile hero crop recalculates normally after a genuine width change",
+);
+await dynamicIphonePage.setViewportSize({ width: 667, height: 320 });
+await dynamicIphonePage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+await dynamicIphonePage.setViewportSize({ width: 667, height: 375 });
+await dynamicIphonePage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+const landscapeHero = await dynamicIphonePage.evaluate(() => ({
+  heroHeight: document.querySelector(".hero").getBoundingClientRect().height,
+  mediaHeight: document.querySelector(".hero__media").getBoundingClientRect().height,
+  lockedHeight: document.querySelector(".hero__media").style.getPropertyValue("--hero-media-height"),
+}));
+assert(
+  landscapeHero.mediaHeight + 0.5 >= landscapeHero.heroHeight && landscapeHero.lockedHeight === "",
+  "Short landscape phones keep the dynamic hero fully covered without a stale portrait lock",
+);
+await dynamicIphoneContext.close();
 
 const noJsPage = await browser.newPage({
   javaScriptEnabled: false,

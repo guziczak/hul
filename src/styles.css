@@ -2467,7 +2467,7 @@ body.privacy-open {
        stable large viewport and let the hero reveal it without rescaling. */
     bottom: auto;
     height: 100vh;
-    height: 100lvh;
+    height: var(--hero-media-height, 100lvh);
     min-height: 680px;
     background-image: url("../public/images/hero-mobile-placeholder.webp");
   }
