@@ -162,6 +162,12 @@ mobileLinks?.querySelectorAll("a").forEach((link) => {
   link.addEventListener("click", () => setMenu(false));
 });
 
+document.addEventListener("pointerdown", (event) => {
+  if (!header?.classList.contains("header--open")) return;
+  if (event.composedPath().includes(header)) return;
+  setMenu(false);
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !header.classList.contains("header--open")) return;
   setMenu(false);
@@ -336,7 +342,7 @@ function splitHeading(heading) {
     const primaryActionDelay = headingDelay + lineTops.length * 100;
     headingHero.style.setProperty("--hero-heading-delay", `${headingDelay}ms`);
     headingHero.style.setProperty("--hero-primary-action-delay", `${primaryActionDelay}ms`);
-    headingHero.style.setProperty("--hero-secondary-action-delay", `${primaryActionDelay + 100}ms`);
+    headingHero.style.setProperty("--hero-secondary-action-delay", `${primaryActionDelay}ms`);
   }
 }
 

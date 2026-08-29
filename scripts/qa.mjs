@@ -223,7 +223,7 @@ assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desk
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.24)" && button.blur === "blur(16px)"), "Glass buttons compensate for the darker local layers with a milkier fill and the original 16px blur");
 assert(desktop.actionHeights.content.every((height) => height === 48) && desktop.actionHeights.header === 32, "Primary content actions share the 48px control height while the navigation CTA remains intentionally compact");
 assert(desktop.heroEntrance.eyebrowIsReveal && desktop.heroEntrance.titleWrapperDuration === 0 && desktop.heroEntrance.headingDelay === 160, "Hero entrance starts with the eyebrow while the heading wrapper itself remains stationary");
-assert(desktop.heroEntrance.lineDelays.every((delay, index) => delay === index * 100) && desktop.heroEntrance.primaryDelay === desktop.heroEntrance.headingDelay + desktop.heroEntrance.lineDelays.length * 100 && desktop.heroEntrance.secondaryDelay === desktop.heroEntrance.primaryDelay + 100, "Hero lines and the two CTAs rise in a deliberate 100ms sequence");
+assert(desktop.heroEntrance.lineDelays.every((delay, index) => delay === index * 100) && desktop.heroEntrance.primaryDelay === desktop.heroEntrance.headingDelay + desktop.heroEntrance.lineDelays.length * 100 && desktop.heroEntrance.secondaryDelay === desktop.heroEntrance.primaryDelay, "Hero lines rise in sequence before both CTAs enter together");
 assert(desktop.heroEntrance.actionTransitions.every((properties) => properties.includes("opacity") && properties.includes("transform")), "Each hero CTA owns its independent fade-and-rise transition");
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
 assert(desktop.headerUtilities.grouped && desktop.headerUtilities.controlGap >= 7 && desktop.headerUtilities.navigationGap >= 32, "Desktop languages and CTA form one spaced utility group clear of the centered navigation");
@@ -231,7 +231,7 @@ assert(desktop.headerUtilities.activeBackground !== "rgba(0, 0, 0, 0)" && deskto
 assert(desktop.heroMedia.decoded && desktop.heroMedia.currentSrc.includes(".webp") && desktop.heroMedia.opacity === "1", "The hero reveals a fully decoded modern image rather than streaming partial pixels");
 assert(desktop.heroMedia.filter === "none" && desktop.heroMedia.transform === "none" && desktop.heroMedia.pictureDisplay === "block" && desktop.heroMedia.shade === "rgba(0, 0, 0, 0.35)", "The hero avoids the filtered transformed image layer that clips in mobile WebKit");
 assert(!desktop.heroLayer.occluded && desktop.heroLayer.position === "fixed" && desktop.heroLayer.mediaVisibility === "visible", "The opening hero remains fully visible and fixed in its active scene");
-assert(desktop.heroLayer.canvasBackground === "rgb(22, 35, 27)" && desktop.heroLayer.overscroll === "none", "The viewport has a dark overscroll backing surface and disables elastic scroll chaining where supported");
+assert(desktop.heroLayer.canvasBackground === "rgb(22, 35, 27)" && desktop.heroLayer.overscroll === "auto", "The dark viewport backing protects bottom overscroll without disabling native pull-to-refresh at the top");
 assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "The phone is immediately available while the back-to-top action stays hidden at the page top");
 assert(desktop.quickActions.phoneBackground === "rgba(50, 38, 31, 0.97)" && desktop.quickActions.topBackground === "rgba(249, 245, 235, 0.84)", "The permanent phone action is oak while the secondary back-to-top action stays milky");
 
@@ -574,6 +574,18 @@ mobileState = await page.evaluate(() => ({
 assert(!mobileState.open && mobileState.focused, "Escape closes the menu and restores focus");
 
 await page.locator(".menu-toggle").click();
+await page.mouse.click(195, 400);
+await page.waitForTimeout(100);
+mobileState = await page.evaluate(() => ({
+  open: document.querySelector(".header").classList.contains("header--open"),
+  expanded: document.querySelector(".menu-toggle").getAttribute("aria-expanded"),
+  inert: document.querySelector(".header__mobile-links").inert,
+  bodyMenuOpen: document.body.classList.contains("menu-open"),
+  quickActionsInert: document.querySelector("[data-quick-actions]").inert,
+}));
+assert(!mobileState.open && mobileState.expanded === "false" && mobileState.inert && !mobileState.bodyMenuOpen && !mobileState.quickActionsInert, "A pointer press outside the mobile navigation closes it and restores the page controls");
+
+await page.locator(".menu-toggle").click();
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.waitForTimeout(220);
 assert(!(await page.locator(".header").evaluate((header) => header.classList.contains("header--open"))), "Desktop resize clears the mobile menu state");
@@ -828,7 +840,7 @@ const noJs = await noJsPage.evaluate(() => ({
   },
 }));
 assert(!noJs.js, "No-JS document does not claim enhancement state");
-assert(noJs.heroPosition === "absolute" && noJs.overscroll === "none" && noJs.canvasBackground === "rgb(22, 35, 27)", "No-JS mode scrolls the hero away and keeps the same dark overscroll backing surface");
+assert(noJs.heroPosition === "absolute" && noJs.overscroll === "auto" && noJs.canvasBackground === "rgb(22, 35, 27)", "No-JS mode scrolls the hero away, keeps a dark overscroll backing surface and preserves pull-to-refresh");
 assert(noJs.headerHeight === 240 && noJs.menuVisibility === "hidden", "No-JS mobile navigation and language selection stay permanently visible without a fake toggle");
 assert(noJs.links.every((link) => link.opacity === "1" && link.height > 0), "No-JS navigation links remain readable");
 assert(noJs.answers.every((height) => height > 0) && noJs.content, "All FAQ content remains readable without JavaScript");

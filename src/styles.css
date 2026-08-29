@@ -70,7 +70,6 @@
 
 html:root {
   scroll-behavior: smooth;
-  overscroll-behavior-y: none;
   background: var(--ink);
 }
 
@@ -412,7 +411,7 @@ main {
 }
 
 .js .hero__actions.reveal .motion-button:nth-child(2) {
-  --hero-action-delay: var(--hero-secondary-action-delay, 460ms);
+  --hero-action-delay: var(--hero-secondary-action-delay, 360ms);
 }
 
 .js .hero__actions.reveal.is-visible .motion-button {
