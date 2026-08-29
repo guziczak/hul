@@ -42,7 +42,8 @@ page.on("requestfailed", (request) => {
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(baseUrl, { waitUntil: "networkidle" });
 await page.evaluate(() => document.fonts.ready);
-await page.waitForTimeout(250);
+await page.waitForFunction(() => document.querySelector(".hero__actions")?.classList.contains("is-visible"));
+await page.waitForTimeout(720);
 
 const desktop = await page.evaluate(() => ({
   js: document.documentElement.classList.contains("js"),
