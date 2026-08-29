@@ -32,14 +32,17 @@
       const earlyRoot = document.documentElement;
       earlyRoot.classList.add("js");
       if (location.hash === "#top") {
-        earlyRoot.classList.add("initial-top");
+        earlyRoot.classList.add("initial-top", "initial-top-visual");
         window.__hulPreviousScrollRestoration = "scrollRestoration" in history ? history.scrollRestoration : "auto";
         if ("scrollRestoration" in history) history.scrollRestoration = "manual";
         const pinInitialTop = () => {
           if (location.hash === "#top" && earlyRoot.classList.contains("initial-top")) scrollTo(0, 0);
         };
         pinInitialTop();
-        document.addEventListener("readystatechange", pinInitialTop);
+        document.addEventListener("readystatechange", () => {
+          pinInitialTop();
+          requestAnimationFrame(pinInitialTop);
+        });
         document.addEventListener("DOMContentLoaded", pinInitialTop, { once: true });
         window.addEventListener("load", pinInitialTop, { once: true });
       }
@@ -56,7 +59,7 @@
         earlyRoot.classList.remove("js", "consent-pending");
         if (earlyRoot.classList.contains("initial-top")) {
           scrollTo(0, 0);
-          earlyRoot.classList.remove("initial-top");
+          earlyRoot.classList.remove("initial-top", "initial-top-visual");
           if ("scrollRestoration" in history) history.scrollRestoration = window.__hulPreviousScrollRestoration || "auto";
         }
       }, 4000);

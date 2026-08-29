@@ -375,8 +375,10 @@ await topReloadPage.evaluate(() => {
   document.documentElement.style.removeProperty("scroll-behavior");
 });
 const topReloadStart = await topReloadPage.evaluate(() => scrollY);
+const previousTopDocumentOrigin = await topReloadPage.evaluate(() => performance.timeOrigin);
 delayTopScript = true;
 await topReloadPage.reload({ waitUntil: "commit" });
+await topReloadPage.waitForFunction((previousOrigin) => performance.timeOrigin !== previousOrigin, previousTopDocumentOrigin);
 await topReloadPage.waitForFunction(() => document.readyState !== "loading");
 await topReloadPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
 const topReloadPositions = [await topReloadPage.evaluate(() => scrollY)];

@@ -17,17 +17,19 @@ function pinRequestedTop() {
 function releaseInitialTopLock() {
   pinRequestedTop();
   if (!initialTopLock) {
-    root.classList.remove("initial-top");
+    root.classList.remove("initial-top", "initial-top-visual");
     return;
   }
   initialTopLock = false;
-  root.classList.remove("initial-top");
+  root.classList.remove("initial-top", "initial-top-visual");
   if ("scrollRestoration" in history) {
     history.scrollRestoration = window.__hulPreviousScrollRestoration || "auto";
   }
 }
 
 if (initialTopLock) {
+  pinRequestedTop();
+  root.classList.remove("initial-top-visual");
   pinRequestedTop();
   document.addEventListener("DOMContentLoaded", pinRequestedTop, { once: true });
   window.addEventListener("load", pinRequestedTop, { once: true });
