@@ -617,13 +617,16 @@ assert(!(await page.locator(".header").evaluate((header) => header.classList.con
 
 for (const width of [320, 431, 768, 810, 1199, 1200, 1664, 1920]) {
   await page.setViewportSize({ width, height: 900 });
-  await page.waitForTimeout(width === 320 ? 520 : 220);
+  await page.waitForTimeout(width <= 431 ? 520 : 220);
   const responsiveLayout = await page.evaluate(() => ({
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     phoneWidth: document.querySelector(".quick-action--phone").getBoundingClientRect().width,
     phoneLabelOpacity: getComputedStyle(document.querySelector(".quick-action--phone .quick-action__tooltip")).opacity,
+    phoneRightInset: innerWidth - document.querySelector(".quick-action--phone").getBoundingClientRect().right,
+    phoneBottomInset: innerHeight - document.querySelector(".quick-action--phone").getBoundingClientRect().bottom,
   }));
   assert(responsiveLayout.overflow === 0, `No horizontal overflow at ${width}px`);
+  if (width === 431) assert(Math.abs(responsiveLayout.phoneRightInset - 40) <= 0.5 && Math.abs(responsiveLayout.phoneBottomInset - 40) <= 0.5, "Large mobile aligns the phone with an equal 40px right and bottom inset");
   if (width === 1199) assert(responsiveLayout.phoneWidth === 48, "Phone remains a compact icon immediately below the desktop breakpoint");
   if (width === 1200) assert(responsiveLayout.phoneWidth >= 120 && responsiveLayout.phoneLabelOpacity === "1", "Phone becomes a labelled capsule exactly at the desktop breakpoint");
   if (width === 320) {
