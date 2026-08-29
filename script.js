@@ -262,7 +262,11 @@ document.fonts.ready.then(() => {
   window.clearTimeout(window.__hulRevealFallback);
 
   let headingResizeTimer = 0;
+  let headingResizeWidth = document.documentElement.clientWidth;
   window.addEventListener("resize", () => {
+    const nextWidth = document.documentElement.clientWidth;
+    if (nextWidth === headingResizeWidth) return;
+    headingResizeWidth = nextWidth;
     window.clearTimeout(headingResizeTimer);
     headingResizeTimer = window.setTimeout(() => {
       document.querySelectorAll("[data-reveal-chars]").forEach(splitHeading);

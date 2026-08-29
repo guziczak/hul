@@ -218,7 +218,7 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
 assert(desktopHeroConsentLayout.headerGap >= 19 && desktopHeroConsentLayout.bannerGap >= 19, "The desktop hero content stays between the header and an undecided consent prompt");
 assert(Math.abs(desktopHeroConsentLayout.actionsBottom - desktop.heroActionsBottom) <= 0.5, "Showing the consent prompt does not move hero content");
 assert(desktopHeroConsentLayout.phoneWidth >= 120 && desktopHeroConsentLayout.phoneHeight === 48 && desktopHeroConsentLayout.phoneLabelVisible, "Desktop presents the permanent phone as a readable oak call capsule");
-assert(desktopHeroConsentLayout.phoneRightGap <= 0.5 && desktopHeroConsentLayout.topRightGap <= 0.5 && desktopHeroConsentLayout.phoneBannerGap >= 11, "Desktop floating actions align with the consent rail and remain directly above it");
+assert(desktopHeroConsentLayout.phoneRightGap <= 0.5 && desktopHeroConsentLayout.phoneBannerGap >= 11, "Desktop phone aligns with the consent rail and remains directly above it");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
@@ -364,15 +364,18 @@ await page.evaluate(() => {
 await page.waitForTimeout(620);
 const footerQuickActions = await page.evaluate(() => {
   const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  const topAction = document.querySelector("[data-scroll-top]").getBoundingClientRect();
   const footer = document.querySelector(".footer").getBoundingClientRect();
   return {
     gap: footer.top - phone.bottom,
+    rightEdgeGap: Math.abs(phone.right - topAction.right),
     darkSurface: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--on-dark"),
     phoneBackground: getComputedStyle(document.querySelector(".quick-action--phone")).backgroundColor,
     phoneColor: getComputedStyle(document.querySelector(".quick-action--phone")).color,
   };
 });
 assert(footerQuickActions.gap >= 12 && footerQuickActions.darkSurface, "Floating actions clear the footer logo and detect the dark ending");
+assert(footerQuickActions.rightEdgeGap <= 0.5, "Visible back-to-top control shares the phone capsule's right edge");
 assert(footerQuickActions.phoneBackground === "rgba(50, 38, 31, 0.97)" && footerQuickActions.phoneColor === "rgb(249, 245, 235)", "The phone action remains oak and legible over the dark ending");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
@@ -398,6 +401,11 @@ assert(mobileState.overflow === 0, "Mobile has no horizontal overflow");
 assert(mobileState.menuInert && mobileState.menuHidden === "true", "Closed mobile navigation is removed from focus order");
 assert(mobileState.heroImage.includes("hero-mobile"), "Mobile loads the dedicated hero crop");
 assert(mobileState.phoneWidth === 48 && mobileState.phoneLabelDisplay === "none", "Mobile keeps the compact thumb-friendly phone icon");
+
+const stableHeadingGlyph = await page.locator(".hero .split-char").first().elementHandle();
+await page.evaluate(() => window.dispatchEvent(new Event("resize")));
+await page.waitForTimeout(180);
+assert(await stableHeadingGlyph.evaluate((glyph) => glyph.isConnected), "Height-only mobile resize events do not rebuild the hero heading");
 
 const stableMobileHeroCrop = await page.evaluate(() => {
   const hero = document.querySelector(".hero");
