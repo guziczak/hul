@@ -553,45 +553,25 @@ function syncFloatingUiOffsets() {
       }
     }
 
-    // At the final CTA, keep the phone in its fixed right-hand column. If a
-    // very narrow viewport leaves no room beside the localized CTA, lift the
-    // phone above the content instead of moving it into the footer.
-    if (compactCtaGuard && contactCtaContent && quickPhone) {
+    // Only genuinely narrow screens need a separate vertical lane above the
+    // final CTA. Wider phones keep the control directly above the consent
+    // rail; reacting to the heading's full layout box caused false jumps even
+    // though its centered glyphs never touched the phone.
+    if (compactCtaGuard && window.innerWidth <= 422 && contactCtaContent && quickPhone) {
       const contentRect = contactCtaContent.getBoundingClientRect();
       const targetContentTop = contactCtaTargetTop ?? contentRect.top;
-      const contentTargetShift = targetContentTop - contentRect.top;
-      const projectedPhoneLeft = window.innerWidth - 8 - quickPhone.offsetWidth;
-      const projectedPhoneRight = projectedPhoneLeft + quickPhone.offsetWidth;
-      const projectedPhoneBottom = window.innerHeight - requestedQuickActionsBottom;
-      const projectedPhoneTop = projectedPhoneBottom - quickPhone.offsetHeight;
-      const contentElements = [
-        contactCtaContent.querySelector("h2"),
-        contactCtaContent.querySelector(".motion-button"),
-      ].filter(Boolean);
-      const projectedCollision = window.innerWidth <= 422 || contentElements.some((element) => {
-        const elementRect = element.getBoundingClientRect();
-        const elementTargetTop = elementRect.top + contentTargetShift;
-        const elementTargetBottom = elementRect.bottom + contentTargetShift;
-        const horizontalOverlap = elementRect.right > projectedPhoneLeft + 1
-          && elementRect.left < projectedPhoneRight - 1;
-        const verticalOverlap = elementTargetBottom > projectedPhoneTop + 1
-          && elementTargetTop < projectedPhoneBottom - 1;
-        return horizontalOverlap && verticalOverlap;
-      });
-      if (projectedCollision) {
-        const safePhoneTop = Math.max(viewportGap, (header?.getBoundingClientRect().bottom || 0) + 8);
-        const availableContentGap = targetContentTop - safePhoneTop - quickPhone.offsetHeight;
-        if (availableContentGap >= -1) {
-          const contentGap = Math.max(0, Math.min(12, availableContentGap));
-          requestedQuickActionsBottom = Math.max(
-            requestedQuickActionsBottom,
-            window.innerHeight - targetContentTop + contentGap,
-          );
-        } else {
-          dockPhoneInFooter = Boolean(
-            footerRect && visibleFooterHeight >= quickPhone.offsetHeight + 16,
-          );
-        }
+      const safePhoneTop = Math.max(viewportGap, (header?.getBoundingClientRect().bottom || 0) + 8);
+      const availableContentGap = targetContentTop - safePhoneTop - quickPhone.offsetHeight;
+      if (availableContentGap >= -1) {
+        const contentGap = Math.max(0, Math.min(12, availableContentGap));
+        requestedQuickActionsBottom = Math.max(
+          requestedQuickActionsBottom,
+          window.innerHeight - targetContentTop + contentGap,
+        );
+      } else {
+        dockPhoneInFooter = Boolean(
+          footerRect && visibleFooterHeight >= quickPhone.offsetHeight + 16,
+        );
       }
     }
 
