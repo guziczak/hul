@@ -360,6 +360,11 @@ const topReloadContext = await browser.newContext({ viewport: { width: 1440, hei
 await topReloadContext.addInitScript(() => {
   localStorage.setItem("hul:privacy-consent:v1", JSON.stringify({ version: 1, analytics: false, maps: false }));
 });
+let delayTopScript = false;
+await topReloadContext.route("**/script.js", async (route) => {
+  if (delayTopScript) await new Promise((resolve) => setTimeout(resolve, 1200));
+  await route.continue();
+});
 const topReloadPage = await topReloadContext.newPage();
 const topUrl = new URL(baseUrl);
 topUrl.hash = "top";
@@ -370,17 +375,24 @@ await topReloadPage.evaluate(() => {
   document.documentElement.style.removeProperty("scroll-behavior");
 });
 const topReloadStart = await topReloadPage.evaluate(() => scrollY);
-await topReloadPage.reload({ waitUntil: "domcontentloaded" });
+delayTopScript = true;
+await topReloadPage.reload({ waitUntil: "commit" });
+await topReloadPage.waitForFunction(() => document.readyState !== "loading");
 const topReloadPositions = [await topReloadPage.evaluate(() => scrollY)];
 for (const delay of [50, 150, 400]) {
   await topReloadPage.waitForTimeout(delay);
   topReloadPositions.push(await topReloadPage.evaluate(() => scrollY));
 }
+await topReloadPage.waitForLoadState("load");
+await topReloadPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const topReloadState = await topReloadPage.evaluate(() => ({
   lock: document.documentElement.classList.contains("initial-top"),
   restoration: history.scrollRestoration,
 }));
-assert(topReloadStart > 900 && topReloadPositions.every((position) => position <= 1), "Reloading a #top URL appears at the hero immediately without a restoration scroll");
+assert(
+  topReloadStart > 900 && topReloadPositions.every((position) => position <= 1),
+  `Reloading a #top URL appears at the hero immediately even while the main script is delayed (start ${topReloadStart}; samples ${topReloadPositions.join(", ")})`,
+);
 assert(!topReloadState.lock && topReloadState.restoration === "auto", "Initial #top locking releases after pageshow and restores normal browser history behavior");
 
 await topReloadPage.evaluate(() => {
