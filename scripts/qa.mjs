@@ -531,6 +531,22 @@ assert(mobileState.heroImage.includes("hero-mobile"), "Mobile loads the dedicate
 assert(mobileState.phoneWidth === 48 && mobileState.phoneLabelDisplay === "none", "Mobile keeps the compact thumb-friendly phone icon");
 assert(mobileState.phoneHeroTopGap <= 0.5 && mobileState.phoneHeroBottomGap <= 0.5, "Mobile phone aligns vertically with hero actions whenever there is safe horizontal room");
 
+const raisedPhoneBottom = await page.locator(".quick-action--phone").evaluate((phone) => innerHeight - phone.getBoundingClientRect().bottom);
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, innerHeight * 1.75);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await page.waitForTimeout(520);
+const scrolledPhoneBottom = await page.locator(".quick-action--phone").evaluate((phone) => innerHeight - phone.getBoundingClientRect().bottom);
+assert(Math.abs(scrolledPhoneBottom - raisedPhoneBottom) <= 0.5, "Mobile phone keeps its elevated hero-row position while the page scrolls");
+await page.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, 0);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await page.waitForTimeout(120);
+
 const stableHeadingGlyph = await page.locator(".hero .split-char").first().elementHandle();
 await page.evaluate(() => window.dispatchEvent(new Event("resize")));
 await page.waitForTimeout(180);

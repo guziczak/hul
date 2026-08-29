@@ -539,7 +539,7 @@ function syncFloatingUiOffsets() {
     const footerOffset = quickActionsBaseBottom + visibleFooterHeight;
     let requestedQuickActionsBottom = Math.max(quickActionsBaseBottom, bannerOffset, footerOffset);
     const heroButtons = [...(heroActions?.querySelectorAll(".motion-button") || [])];
-    if (quickPhone && heroRect && heroActions && heroButtons.length && window.scrollY < heroRect.height) {
+    if (quickPhone && heroRect && heroActions && heroButtons.length) {
       const phoneRect = quickPhone.getBoundingClientRect();
       const horizontalCollision = heroButtons.some((button) => {
         const buttonRect = button.getBoundingClientRect();
