@@ -35,6 +35,13 @@
         earlyRoot.classList.add("initial-top");
         window.__hulPreviousScrollRestoration = "scrollRestoration" in history ? history.scrollRestoration : "auto";
         if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+        const pinInitialTop = () => {
+          if (location.hash === "#top" && earlyRoot.classList.contains("initial-top")) scrollTo(0, 0);
+        };
+        pinInitialTop();
+        document.addEventListener("readystatechange", pinInitialTop);
+        document.addEventListener("DOMContentLoaded", pinInitialTop, { once: true });
+        window.addEventListener("load", pinInitialTop, { once: true });
       }
       try {
         const earlyConsent = JSON.parse(localStorage.getItem("hul:privacy-consent:v1"));
@@ -45,7 +52,14 @@
       } catch {
         earlyRoot.classList.add("consent-pending");
       }
-      window.__hulRevealFallback = window.setTimeout(() => earlyRoot.classList.remove("js", "consent-pending"), 4000);
+      window.__hulRevealFallback = window.setTimeout(() => {
+        earlyRoot.classList.remove("js", "consent-pending");
+        if (earlyRoot.classList.contains("initial-top")) {
+          scrollTo(0, 0);
+          earlyRoot.classList.remove("initial-top");
+          if ("scrollRestoration" in history) history.scrollRestoration = window.__hulPreviousScrollRestoration || "auto";
+        }
+      }, 4000);
     </script>
     <link rel="stylesheet" href="./src/styles.css" />
     <script type="application/ld+json">
