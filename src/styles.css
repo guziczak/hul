@@ -66,9 +66,10 @@
   box-sizing: border-box;
 }
 
-html {
+html:root {
   scroll-behavior: smooth;
-  background: var(--paper);
+  overscroll-behavior-y: none;
+  background: var(--ink);
 }
 
 body {
@@ -539,6 +540,16 @@ main {
   overflow: hidden;
   background: var(--ink);
   color: var(--paper);
+}
+
+.hero--occluded .hero__media,
+.hero--occluded .hero__shade,
+.hero--occluded .hero__content {
+  visibility: hidden;
+}
+
+html:not(.js) .hero {
+  position: absolute;
 }
 
 .hero__media,

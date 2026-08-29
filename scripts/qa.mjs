@@ -107,6 +107,13 @@ const desktop = await page.evaluate(() => ({
     pictureDisplay: getComputedStyle(document.querySelector(".hero__media")).display,
     shade: getComputedStyle(document.querySelector(".hero__shade")).backgroundColor,
   },
+  heroLayer: {
+    occluded: document.querySelector(".hero").classList.contains("hero--occluded"),
+    position: getComputedStyle(document.querySelector(".hero")).position,
+    mediaVisibility: getComputedStyle(document.querySelector(".hero__media")).visibility,
+    canvasBackground: getComputedStyle(document.documentElement).backgroundColor,
+    overscroll: getComputedStyle(document.documentElement).overscrollBehaviorY,
+  },
   heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
   quickActions: {
     phoneHref: document.querySelector(".quick-action--phone")?.getAttribute("href"),
@@ -144,6 +151,8 @@ assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 2
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
 assert(desktop.heroMedia.decoded && desktop.heroMedia.currentSrc.includes(".webp") && desktop.heroMedia.opacity === "1", "The hero reveals a fully decoded modern image rather than streaming partial pixels");
 assert(desktop.heroMedia.filter === "none" && desktop.heroMedia.transform === "none" && desktop.heroMedia.pictureDisplay === "block" && desktop.heroMedia.shade === "rgba(0, 0, 0, 0.35)", "The hero avoids the filtered transformed image layer that clips in mobile WebKit");
+assert(!desktop.heroLayer.occluded && desktop.heroLayer.position === "fixed" && desktop.heroLayer.mediaVisibility === "visible", "The opening hero remains fully visible and fixed in its active scene");
+assert(desktop.heroLayer.canvasBackground === "rgb(22, 35, 27)" && desktop.heroLayer.overscroll === "none", "The viewport has a dark overscroll backing surface and disables elastic scroll chaining where supported");
 assert(desktop.quickActions.phoneHref === "tel:+48717810307" && desktop.quickActions.topHref === "#top" && desktop.quickActions.phoneVisible && !desktop.quickActions.topVisible, "The phone is immediately available while the back-to-top action stays hidden at the page top");
 assert(desktop.quickActions.phoneBackground === "rgba(50, 38, 31, 0.97)" && desktop.quickActions.topBackground === "rgba(249, 245, 235, 0.84)", "The permanent phone action is oak while the secondary back-to-top action stays milky");
 
@@ -188,10 +197,16 @@ const footerConsentLayout = await page.evaluate(() => {
     actionsGap: banner.top - quickActions.bottom,
     bannerTop: banner.top,
     heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
+    heroOccluded: document.querySelector(".hero").classList.contains("hero--occluded"),
+    heroPosition: getComputedStyle(document.querySelector(".hero")).position,
+    heroMediaVisibility: getComputedStyle(document.querySelector(".hero__media")).visibility,
+    heroContentVisibility: getComputedStyle(document.querySelector(".hero__content")).visibility,
+    heroBackground: getComputedStyle(document.querySelector(".hero")).backgroundColor,
   };
 });
 assert(footerConsentLayout.footerGap >= 19 && footerConsentLayout.actionsGap >= 11 && footerConsentLayout.bannerTop >= 20, "The desktop consent prompt clears the footer while floating actions remain above it");
 assert(Math.abs(footerConsentLayout.heroActionsBottom - desktopHeroConsentLayout.actionsBottom) <= 0.5, "Footer movement does not change the hero content height");
+assert(footerConsentLayout.heroOccluded && footerConsentLayout.heroPosition === "fixed" && footerConsentLayout.heroMediaVisibility === "hidden" && footerConsentLayout.heroContentVisibility === "hidden" && footerConsentLayout.heroBackground === "rgb(22, 35, 27)", "Bottom overscroll can reveal only the dark hero base, never the opening image or copy");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, 0);
@@ -207,8 +222,11 @@ const rejectedPrivacy = await page.evaluate(() => ({
   consentPending: document.documentElement.classList.contains("consent-pending"),
   heroContentBottom: parseFloat(getComputedStyle(document.querySelector(".hero__content")).bottom),
   heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
+  heroOccluded: document.querySelector(".hero").classList.contains("hero--occluded"),
+  heroMediaVisibility: getComputedStyle(document.querySelector(".hero__media")).visibility,
 }));
 assert(rejectedPrivacy.consent?.version === 1 && !rejectedPrivacy.consent.analytics && !rejectedPrivacy.consent.maps, "Rejecting optional services stores an explicit category-level decision");
+assert(!rejectedPrivacy.heroOccluded && rejectedPrivacy.heroMediaVisibility === "visible", "Returning to the top restores the opening hero after its bottom-overscroll guard");
 assert(!rejectedPrivacy.iframe && !rejectedPrivacy.analytics, "Rejecting optional services leaves Google resources unloaded");
 assert(!rejectedPrivacy.consentPending && rejectedPrivacy.heroContentBottom === 112 && rejectedPrivacy.heroActionsBottom > desktop.heroActionsBottom + 21, "Hiding consent moves hero once to its fixed normal position");
 await page.reload({ waitUntil: "networkidle" });
@@ -522,6 +540,9 @@ const noJsPage = await browser.newPage({
 await noJsPage.goto(baseUrl, { waitUntil: "networkidle" });
 const noJs = await noJsPage.evaluate(() => ({
   js: document.documentElement.classList.contains("js"),
+  heroPosition: getComputedStyle(document.querySelector(".hero")).position,
+  overscroll: getComputedStyle(document.documentElement).overscrollBehaviorY,
+  canvasBackground: getComputedStyle(document.documentElement).backgroundColor,
   headerHeight: document.querySelector(".header").getBoundingClientRect().height,
   menuVisibility: getComputedStyle(document.querySelector(".menu-toggle")).visibility,
   links: [...document.querySelectorAll(".header__mobile-links a")].map((link) => ({
@@ -546,6 +567,7 @@ const noJs = await noJsPage.evaluate(() => ({
   },
 }));
 assert(!noJs.js, "No-JS document does not claim enhancement state");
+assert(noJs.heroPosition === "absolute" && noJs.overscroll === "none" && noJs.canvasBackground === "rgb(22, 35, 27)", "No-JS mode scrolls the hero away and keeps the same dark overscroll backing surface");
 assert(noJs.headerHeight === 240 && noJs.menuVisibility === "hidden", "No-JS mobile navigation and language selection stay permanently visible without a fake toggle");
 assert(noJs.links.every((link) => link.opacity === "1" && link.height > 0), "No-JS navigation links remain readable");
 assert(noJs.answers.every((height) => height > 0) && noJs.content, "All FAQ content remains readable without JavaScript");

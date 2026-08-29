@@ -6,6 +6,7 @@ const mobileLinks = document.querySelector(".header__mobile-links");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const heroMedia = document.querySelector(".hero__media");
 const heroImage = heroMedia?.querySelector("[data-hero-image]");
+const pageContent = document.querySelector(".page-content");
 const interfaceLanguage = document.documentElement.lang.toLowerCase().split("-")[0];
 const interfaceCopy = {
   pl: {
@@ -151,6 +152,12 @@ function updateHeader(instant = false) {
   const scroll = window.scrollY;
   const menuOpen = header.classList.contains("header--open");
   let translate = 0;
+
+  // Once opaque content has fully covered the hero, suppress its visual
+  // layers. The fixed dark base can then safely back elastic bottom
+  // overscroll without exposing the opening image underneath the footer.
+  const heroCovered = pageContent && pageContent.getBoundingClientRect().top <= -8;
+  hero.classList.toggle("hero--occluded", Boolean(heroCovered));
 
   if (!menuOpen && scroll > 0 && scroll < hideEnd) {
     translate = -100 * (scroll / hideEnd);
