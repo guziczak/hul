@@ -477,6 +477,7 @@ function syncFloatingUiOffsets() {
   banner?.style.setProperty("--cookie-banner-bottom", `${cookieBannerBottom}px`);
 
   let guardContactCta = false;
+  let contactCtaTargetTop = null;
   if (mobile && bannerVisible && contactCta && contactCtaContent) {
     const ctaRect = contactCta.getBoundingClientRect();
     const contentRect = contactCtaContent.getBoundingClientRect();
@@ -493,6 +494,7 @@ function syncFloatingUiOffsets() {
       const maximumLift = Math.max(0, naturalTop - safeContentTop);
       const appliedLift = Math.min(Math.ceil(requestedLift), Math.floor(maximumLift));
       contactCta.style.setProperty("--contact-cta-content-offset", `${-appliedLift}px`);
+      contactCtaTargetTop = naturalTop - appliedLift;
       guardContactCta = requestedLift > 0;
     } else {
       contactCta.style.removeProperty("--contact-cta-content-offset");
@@ -502,25 +504,6 @@ function syncFloatingUiOffsets() {
   }
   const compactCtaGuard = guardContactCta && window.innerWidth <= 430;
   quickActions?.classList.toggle("quick-actions--cta-guard", compactCtaGuard);
-
-  const dockPhoneInFooter = Boolean(
-    compactCtaGuard
-      && footerRect
-      && quickPhone
-      && visibleFooterHeight >= quickPhone.offsetHeight + 16,
-  );
-  quickActions?.classList.toggle("quick-actions--footer-docked", dockPhoneInFooter);
-  if (dockPhoneInFooter && quickActions && footer) {
-    const footerMetaRect = footer.querySelector(".footer__meta")?.getBoundingClientRect();
-    const footerLogoRect = footer.querySelector(".logo")?.getBoundingClientRect();
-    const dockLeft = footerMetaRect && footerLogoRect
-      ? (footerMetaRect.right + footerLogoRect.left) / 2
-      : window.innerWidth * 0.6;
-    const dockRight = window.innerWidth - dockLeft - quickActions.offsetWidth / 2;
-    quickActions.style.setProperty("--quick-actions-right", `${dockRight}px`);
-  } else {
-    quickActions?.style.removeProperty("--quick-actions-right");
-  }
 
   const heroContent = hero?.querySelector(".hero__content");
   const heroActions = heroContent?.querySelector(".hero__actions");
@@ -533,6 +516,7 @@ function syncFloatingUiOffsets() {
     : 0;
 
   if (quickActions) {
+    let dockPhoneInFooter = false;
     const bannerOffset = bannerVisible
       ? cookieBannerBottom + banner.offsetHeight + 12
       : quickActionsBaseBottom;
@@ -568,17 +552,74 @@ function syncFloatingUiOffsets() {
         );
       }
     }
+
+    // At the final CTA, keep the phone in its fixed right-hand column. If a
+    // very narrow viewport leaves no room beside the localized CTA, lift the
+    // phone above the content instead of moving it into the footer.
+    if (compactCtaGuard && contactCtaContent && quickPhone) {
+      const contentRect = contactCtaContent.getBoundingClientRect();
+      const targetContentTop = contactCtaTargetTop ?? contentRect.top;
+      const contentTargetShift = targetContentTop - contentRect.top;
+      const projectedPhoneLeft = window.innerWidth - 8 - quickPhone.offsetWidth;
+      const projectedPhoneRight = projectedPhoneLeft + quickPhone.offsetWidth;
+      const projectedPhoneBottom = window.innerHeight - requestedQuickActionsBottom;
+      const projectedPhoneTop = projectedPhoneBottom - quickPhone.offsetHeight;
+      const contentElements = [
+        contactCtaContent.querySelector("h2"),
+        contactCtaContent.querySelector(".motion-button"),
+      ].filter(Boolean);
+      const projectedCollision = window.innerWidth <= 422 || contentElements.some((element) => {
+        const elementRect = element.getBoundingClientRect();
+        const elementTargetTop = elementRect.top + contentTargetShift;
+        const elementTargetBottom = elementRect.bottom + contentTargetShift;
+        const horizontalOverlap = elementRect.right > projectedPhoneLeft + 1
+          && elementRect.left < projectedPhoneRight - 1;
+        const verticalOverlap = elementTargetBottom > projectedPhoneTop + 1
+          && elementTargetTop < projectedPhoneBottom - 1;
+        return horizontalOverlap && verticalOverlap;
+      });
+      if (projectedCollision) {
+        const safePhoneTop = Math.max(viewportGap, (header?.getBoundingClientRect().bottom || 0) + 8);
+        const availableContentGap = targetContentTop - safePhoneTop - quickPhone.offsetHeight;
+        if (availableContentGap >= -1) {
+          const contentGap = Math.max(0, Math.min(12, availableContentGap));
+          requestedQuickActionsBottom = Math.max(
+            requestedQuickActionsBottom,
+            window.innerHeight - targetContentTop + contentGap,
+          );
+        } else {
+          dockPhoneInFooter = Boolean(
+            footerRect && visibleFooterHeight >= quickPhone.offsetHeight + 16,
+          );
+        }
+      }
+    }
+
+    quickActions.classList.toggle("quick-actions--footer-docked", dockPhoneInFooter);
     if (dockPhoneInFooter && footerRect) {
+      const footerMetaRect = footer?.querySelector(".footer__meta")?.getBoundingClientRect();
+      const footerLogoRect = footer?.querySelector(".logo")?.getBoundingClientRect();
+      const dockLeft = footerMetaRect && footerLogoRect
+        ? (footerMetaRect.right + footerLogoRect.left) / 2
+        : window.innerWidth * 0.6;
+      const dockRight = window.innerWidth - dockLeft - quickActions.offsetWidth / 2;
+      quickActions.style.setProperty("--quick-actions-right", `${dockRight}px`);
       const visibleFooterTop = Math.max(0, footerRect.top);
       const visibleFooterBottom = Math.min(window.innerHeight, footerRect.bottom);
       const visibleFooterCenter = (visibleFooterTop + visibleFooterBottom) / 2;
       requestedQuickActionsBottom = window.innerHeight
         - visibleFooterCenter
         - quickActions.offsetHeight / 2;
+    } else {
+      quickActions.style.removeProperty("--quick-actions-right");
     }
+
+    const protectedViewportTop = compactCtaGuard
+      ? Math.max(viewportGap, (header?.getBoundingClientRect().bottom || 0) + 8)
+      : viewportGap;
     const maximumQuickActionsBottom = Math.max(
       quickActionsBaseBottom,
-      window.innerHeight - quickActions.offsetHeight - viewportGap,
+      window.innerHeight - quickActions.offsetHeight - protectedViewportTop,
     );
     const quickActionsBottom = Math.min(requestedQuickActionsBottom, maximumQuickActionsBottom);
     quickActions.style.setProperty("--quick-actions-bottom", `${quickActionsBottom}px`);

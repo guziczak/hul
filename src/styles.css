@@ -2882,7 +2882,7 @@ body.privacy-open {
   }
 
   .quick-actions {
-    right: var(--quick-actions-right, clamp(12px, calc(100vw - 361px), 40px));
+    right: var(--quick-actions-right, 8px);
     bottom: var(--quick-actions-bottom, 16px);
   }
 
@@ -2983,6 +2983,13 @@ body.privacy-open {
   .contact-cta__content h2 {
     font-size: 48px;
     line-height: 48px;
+  }
+}
+
+@media (max-width: 340px) and (max-height: 639px) {
+  html[lang="de"] .contact-cta__content h2 {
+    font-size: 40px;
+    line-height: 40px;
   }
 }
 

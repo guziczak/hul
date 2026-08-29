@@ -626,7 +626,7 @@ for (const width of [320, 431, 768, 810, 1199, 1200, 1664, 1920]) {
     phoneBottomInset: innerHeight - document.querySelector(".quick-action--phone").getBoundingClientRect().bottom,
   }));
   assert(responsiveLayout.overflow === 0, `No horizontal overflow at ${width}px`);
-  if (width === 431) assert(Math.abs(responsiveLayout.phoneRightInset - 40) <= 0.5 && Math.abs(responsiveLayout.phoneBottomInset - 40) <= 0.5, "Large mobile aligns the phone with an equal 40px right and bottom inset");
+  if (width === 431) assert(Math.abs(responsiveLayout.phoneRightInset - 8) <= 0.5 && Math.abs(responsiveLayout.phoneBottomInset - 40) <= 0.5, "Large mobile aligns the phone with the consent rail while retaining its elevated hero-row position");
   if (width === 1199) assert(responsiveLayout.phoneWidth === 48, "Phone remains a compact icon immediately below the desktop breakpoint");
   if (width === 1200) assert(responsiveLayout.phoneWidth >= 120 && responsiveLayout.phoneLabelOpacity === "1", "Phone becomes a labelled capsule exactly at the desktop breakpoint");
   if (width === 320) {
@@ -1005,6 +1005,7 @@ await acceptPage.evaluate(() => {
 });
 await acceptPage.waitForTimeout(520);
 const mobileFooterConsentLayout = await acceptPage.evaluate(() => {
+  const header = document.querySelector(".header__top").getBoundingClientRect();
   const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
   const footer = document.querySelector(".footer").getBoundingClientRect();
   const quickActions = document.querySelector("[data-quick-actions]");
@@ -1029,15 +1030,21 @@ const mobileFooterConsentLayout = await acceptPage.evaluate(() => {
     topActionDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
     phoneVisible: phone.width === 48 && phone.height === 48,
     phoneClearsButton: !intersects(contactButton, phone),
-    phoneBannerGap: phone.top - banner.bottom,
-    phoneTopInset: phone.top - footer.top,
-    phoneBottomInset: footer.bottom - phone.bottom,
+    phoneClearsContent: !intersects(contactContent, phone),
+    phoneClearsFooter: !intersects(footer, phone),
+    phoneBannerGap: banner.top - phone.bottom,
+    phoneHeaderGap: phone.top - header.bottom,
+    phoneRightGap: Math.abs(phone.right - banner.right),
     phoneDocked: quickActions.classList.contains("quick-actions--footer-docked"),
   };
 });
 assert(mobileFooterConsentLayout.footerGap >= 7 && mobileFooterConsentLayout.bannerTop >= 8, "The mobile consent prompt clears the footer without being pushed off-screen");
 assert(mobileFooterConsentLayout.contactGap >= 11 && mobileFooterConsentLayout.contactInset >= 15 && mobileFooterConsentLayout.contactReserve >= 39 && mobileFooterConsentLayout.contentAnimatesTop, "The final mobile contact CTA reserves enough real space and moves smoothly above consent");
-assert(mobileFooterConsentLayout.topActionDisplay === "none" && mobileFooterConsentLayout.phoneVisible && mobileFooterConsentLayout.phoneClearsButton && mobileFooterConsentLayout.phoneDocked && mobileFooterConsentLayout.phoneBannerGap >= 7 && mobileFooterConsentLayout.phoneTopInset >= 7 && mobileFooterConsentLayout.phoneBottomInset >= 7, "The phone docks in free footer space while only the competing top arrow disappears");
+assert(mobileFooterConsentLayout.topActionDisplay === "none" && mobileFooterConsentLayout.phoneVisible, "The compact footer state keeps the phone visible and suppresses only the competing top arrow");
+assert(mobileFooterConsentLayout.phoneClearsButton, "The compact footer phone clears the final CTA button");
+assert(mobileFooterConsentLayout.phoneClearsContent, "The compact footer phone clears the complete final CTA content block");
+assert(mobileFooterConsentLayout.phoneClearsFooter, "The compact footer phone remains outside the footer");
+assert(!mobileFooterConsentLayout.phoneDocked && mobileFooterConsentLayout.phoneBannerGap >= 11 && mobileFooterConsentLayout.phoneHeaderGap >= 7 && mobileFooterConsentLayout.phoneRightGap <= 0.5, "The phone stays on the consent rail above page content instead of jumping into the footer");
 assert(Math.abs(mobileFooterConsentLayout.heroActionsBottom - mobileHeroConsentLayout.actionsBottom) <= 0.5, "Mobile footer movement leaves hero content at its fixed consent height");
 await acceptPage.locator("[data-consent-accept]").click();
 await acceptPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
@@ -1255,6 +1262,14 @@ for (const localized of localizedPages) {
       && button.left < phone.right - 1
       && button.bottom > phone.top + 1
       && button.top < phone.bottom - 1;
+    const phoneIntersectsContent = content.right > phone.left + 1
+      && content.left < phone.right - 1
+      && content.bottom > phone.top + 1
+      && content.top < phone.bottom - 1;
+    const phoneIntersectsFooter = footer.right > phone.left + 1
+      && footer.left < phone.right - 1
+      && footer.bottom > phone.top + 1
+      && footer.top < phone.bottom - 1;
     return {
       bannerGap: banner.top - content.bottom,
       footerGap: footer.top - banner.bottom,
@@ -1266,14 +1281,20 @@ for (const localized of localizedPages) {
       topActionDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
       phoneVisible: phone.width === 48 && phone.height === 48,
       phoneClearsButton: !phoneIntersectsButton,
-      phoneBannerGap: phone.top - banner.bottom,
-      phoneTopInset: phone.top - footer.top,
-      phoneBottomInset: footer.bottom - phone.bottom,
+      phoneClearsContent: !phoneIntersectsContent,
+      phoneClearsFooter: !phoneIntersectsFooter,
+      phoneBannerGap: banner.top - phone.bottom,
+      phoneHeaderGap: phone.top - header.bottom,
+      phoneRightGap: Math.abs(phone.right - banner.right),
       phoneDocked: quickActions.classList.contains("quick-actions--footer-docked"),
     };
   });
   assert(localizedFooterConsent.bannerGap >= 11 && localizedFooterConsent.footerGap >= 7 && localizedFooterConsent.headerGap >= 7 && localizedFooterConsent.ctaInset >= 15 && localizedFooterConsent.reserve >= 39 && localizedFooterConsent.contentAnimatesTop, `${localized.code.toUpperCase()} final CTA remains fully readable and moves smoothly above undecided consent at 320px`);
-  assert(localizedFooterConsent.topActionDisplay === "none" && localizedFooterConsent.phoneVisible && localizedFooterConsent.phoneClearsButton && localizedFooterConsent.phoneDocked && localizedFooterConsent.phoneBannerGap >= 7 && localizedFooterConsent.phoneTopInset >= 7 && localizedFooterConsent.phoneBottomInset >= 7, `${localized.code.toUpperCase()} docks the phone clear of the CTA and suppresses only the competing top arrow`);
+  assert(localizedFooterConsent.topActionDisplay === "none" && localizedFooterConsent.phoneVisible, `${localized.code.toUpperCase()} keeps the footer phone visible and suppresses only the competing top arrow`);
+  assert(localizedFooterConsent.phoneClearsButton, `${localized.code.toUpperCase()} footer phone clears the localized final CTA button`);
+  assert(localizedFooterConsent.phoneClearsContent, `${localized.code.toUpperCase()} footer phone clears the complete localized CTA content block`);
+  assert(localizedFooterConsent.phoneClearsFooter, `${localized.code.toUpperCase()} footer phone remains outside the footer`);
+  assert(!localizedFooterConsent.phoneDocked && localizedFooterConsent.phoneBannerGap >= 11 && localizedFooterConsent.phoneHeaderGap >= 7 && localizedFooterConsent.phoneRightGap <= 0.5, `${localized.code.toUpperCase()} keeps the phone on the consent rail above content and out of the footer`);
   if (localized.code === "de") {
     await localizedPage.setViewportSize({ width: 360, height: 568 });
     await localizedPage.evaluate(() => {
