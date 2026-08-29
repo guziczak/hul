@@ -515,12 +515,21 @@ let mobileState = await page.evaluate(() => ({
   heroImage: document.querySelector(".hero__media img").currentSrc,
   phoneWidth: document.querySelector(".quick-action--phone").getBoundingClientRect().width,
   phoneLabelDisplay: getComputedStyle(document.querySelector(".quick-action--phone .quick-action__tooltip")).display,
+  phoneHeroTopGap: Math.abs(
+    document.querySelector(".quick-action--phone").getBoundingClientRect().top
+      - document.querySelector(".hero__actions").getBoundingClientRect().top
+  ),
+  phoneHeroBottomGap: Math.abs(
+    document.querySelector(".quick-action--phone").getBoundingClientRect().bottom
+      - document.querySelector(".hero__actions").getBoundingClientRect().bottom
+  ),
 }));
 assert(mobileState.ctaLines === 3, "Mobile CTA keeps the target three-line split after resize");
 assert(mobileState.overflow === 0, "Mobile has no horizontal overflow");
 assert(mobileState.menuInert && mobileState.menuHidden === "true", "Closed mobile navigation is removed from focus order");
 assert(mobileState.heroImage.includes("hero-mobile"), "Mobile loads the dedicated hero crop");
 assert(mobileState.phoneWidth === 48 && mobileState.phoneLabelDisplay === "none", "Mobile keeps the compact thumb-friendly phone icon");
+assert(mobileState.phoneHeroTopGap <= 0.5 && mobileState.phoneHeroBottomGap <= 0.5, "Mobile phone aligns vertically with hero actions whenever there is safe horizontal room");
 
 const stableHeadingGlyph = await page.locator(".hero .split-char").first().elementHandle();
 await page.evaluate(() => window.dispatchEvent(new Event("resize")));

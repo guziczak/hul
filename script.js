@@ -558,10 +558,10 @@ function syncFloatingUiOffsets() {
         );
       }
 
-      // On wide screens the phone belongs visually to the hero action row.
-      // Keep its horizontal content-rail alignment, but match the buttons'
-      // vertical position while the opening hero is still on screen.
-      if (window.innerWidth >= 1200) {
+      // When there is enough horizontal room, the phone belongs visually to
+      // the hero action row on every viewport. Narrow screens keep the safer
+      // separate position instead of letting the control cover either CTA.
+      if (!horizontalCollision) {
         requestedQuickActionsBottom = Math.max(
           requestedQuickActionsBottom,
           window.innerHeight - heroActionsTargetBottom,
