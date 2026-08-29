@@ -517,6 +517,7 @@ function syncFloatingUiOffsets() {
 
   if (quickActions) {
     let dockPhoneInFooter = false;
+    let protectQuickActionsFromHeader = compactCtaGuard;
     const bannerOffset = bannerVisible
       ? cookieBannerBottom + banner.offsetHeight + 12
       : quickActionsBaseBottom;
@@ -575,6 +576,44 @@ function syncFloatingUiOffsets() {
       }
     }
 
+    // With consent already decided, align the back-to-top control with the
+    // final contact button while the footer is visible. The phone remains one
+    // regular control gap below it. On narrow screens the stack moves above
+    // the complete CTA instead of covering its full-width button.
+    if (mobile && !bannerVisible && visibleFooterHeight > 0 && quickTop?.classList.contains("is-visible") && contactCtaContent) {
+      const contactButtonRect = contactCtaContent.querySelector(".motion-button")?.getBoundingClientRect();
+      const contactContentRect = contactCtaContent.getBoundingClientRect();
+      const contactContentStyle = getComputedStyle(contactCtaContent);
+      const animatedContentTop = parseFloat(contactContentStyle.top) || 0;
+      let animatedContentTranslateY = 0;
+      if (contactContentStyle.transform !== "none") {
+        try {
+          animatedContentTranslateY = new DOMMatrixReadOnly(contactContentStyle.transform).m42;
+        } catch {
+          animatedContentTranslateY = 0;
+        }
+      }
+      const contactContentTargetTop = contactContentRect.top - animatedContentTop - animatedContentTranslateY;
+      const topActionRect = quickTop.getBoundingClientRect();
+      if (contactButtonRect) {
+        const contactButtonTargetTop = contactButtonRect.top - animatedContentTop - animatedContentTranslateY;
+        const horizontalCollision = contactButtonRect.right > topActionRect.left - 12
+          && contactButtonRect.left < topActionRect.right + 12;
+        if (horizontalCollision) {
+          requestedQuickActionsBottom = Math.max(
+            requestedQuickActionsBottom,
+            window.innerHeight - contactContentTargetTop + 12,
+          );
+          protectQuickActionsFromHeader = true;
+        } else {
+          requestedQuickActionsBottom = Math.max(
+            requestedQuickActionsBottom,
+            window.innerHeight - contactButtonTargetTop - quickActions.offsetHeight,
+          );
+        }
+      }
+    }
+
     quickActions.classList.toggle("quick-actions--footer-docked", dockPhoneInFooter);
     if (dockPhoneInFooter && footerRect) {
       const footerMetaRect = footer?.querySelector(".footer__meta")?.getBoundingClientRect();
@@ -594,7 +633,7 @@ function syncFloatingUiOffsets() {
       quickActions.style.removeProperty("--quick-actions-right");
     }
 
-    const protectedViewportTop = compactCtaGuard
+    const protectedViewportTop = protectQuickActionsFromHeader
       ? Math.max(viewportGap, (header?.getBoundingClientRect().bottom || 0) + 8)
       : viewportGap;
     const maximumQuickActionsBottom = Math.max(
