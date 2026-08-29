@@ -117,6 +117,14 @@ const desktop = await page.evaluate(() => ({
     background: getComputedStyle(button).backgroundColor,
     blur: getComputedStyle(button).backdropFilter,
   })),
+  actionHeights: {
+    content: [
+      ...document.querySelectorAll(".hero__actions .motion-button"),
+      document.querySelector(".visit__details .motion-button"),
+      document.querySelector(".contact-cta .motion-button"),
+    ].map((button) => button.getBoundingClientRect().height),
+    header: document.querySelector(".header .motion-button--compact").getBoundingClientRect().height,
+  },
   heroHeader: {
     background: getComputedStyle(document.querySelector(".header")).backgroundColor,
     blur: getComputedStyle(document.querySelector(".header")).backdropFilter,
@@ -194,6 +202,7 @@ assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section
 assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
 assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desktop.schemaModel.pageLanguage === "pl" && ["pl", "en", "de"].every((language) => desktop.schemaModel.siteLanguages?.includes(language)), "Polish WebPage and multilingual WebSite structured data are linked correctly");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.24)" && button.blur === "blur(16px)"), "Glass buttons compensate for the darker local layers with a milkier fill and the original 16px blur");
+assert(desktop.actionHeights.content.every((height) => height === 48) && desktop.actionHeights.header === 32, "Primary content actions share the 48px control height while the navigation CTA remains intentionally compact");
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
 assert(desktop.headerUtilities.grouped && desktop.headerUtilities.controlGap >= 7 && desktop.headerUtilities.navigationGap >= 32, "Desktop languages and CTA form one spaced utility group clear of the centered navigation");
 assert(desktop.headerUtilities.activeBackground !== "rgba(0, 0, 0, 0)" && desktop.headerUtilities.visibleTrackLabels === 1, "The segmented language control marks the current locale and the animated CTA shows one resting label");

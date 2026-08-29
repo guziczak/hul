@@ -260,7 +260,7 @@ main {
 .motion-button {
   position: relative;
   display: inline-flex;
-  height: 40px;
+  height: 48px;
   align-items: center;
   justify-content: center;
   overflow: hidden;
