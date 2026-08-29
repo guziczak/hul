@@ -43,7 +43,7 @@ await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(baseUrl, { waitUntil: "networkidle" });
 await page.evaluate(() => document.fonts.ready);
 await page.waitForFunction(() => document.querySelector(".hero__actions")?.classList.contains("is-visible"));
-await page.waitForTimeout(720);
+await page.waitForTimeout(1150);
 
 const desktop = await page.evaluate(() => ({
   js: document.documentElement.classList.contains("js"),
@@ -125,6 +125,25 @@ const desktop = await page.evaluate(() => ({
     ].map((button) => button.getBoundingClientRect().height),
     header: document.querySelector(".header .motion-button--compact").getBoundingClientRect().height,
   },
+  heroEntrance: (() => {
+    const heroElement = document.querySelector(".hero");
+    const title = document.querySelector(".hero__title");
+    const lineDelays = [...document.querySelectorAll(".hero__title .split-word:not(.split-word--anchor)")]
+      .map((word) => parseFloat(word.style.getPropertyValue("--line-delay")))
+      .filter((delay, index, delays) => delays.indexOf(delay) === index)
+      .sort((first, second) => first - second);
+    const actions = [...document.querySelectorAll(".hero__actions .motion-button")];
+    return {
+      eyebrowIsReveal: document.querySelector(".hero__eyebrow")?.classList.contains("reveal"),
+      titleWrapperDuration: parseFloat(getComputedStyle(title).transitionDuration),
+      headingDelay: parseFloat(getComputedStyle(heroElement).getPropertyValue("--hero-heading-delay")),
+      primaryDelay: parseFloat(getComputedStyle(heroElement).getPropertyValue("--hero-primary-action-delay")),
+      secondaryDelay: parseFloat(getComputedStyle(heroElement).getPropertyValue("--hero-secondary-action-delay")),
+      lineDelays,
+      actionTransitions: actions.map((action) => getComputedStyle(action).transitionProperty
+        .split(",").map((property) => property.trim())),
+    };
+  })(),
   heroHeader: {
     background: getComputedStyle(document.querySelector(".header")).backgroundColor,
     blur: getComputedStyle(document.querySelector(".header")).backdropFilter,
@@ -203,6 +222,9 @@ assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data conta
 assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desktop.schemaModel.pageLanguage === "pl" && ["pl", "en", "de"].every((language) => desktop.schemaModel.siteLanguages?.includes(language)), "Polish WebPage and multilingual WebSite structured data are linked correctly");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.24)" && button.blur === "blur(16px)"), "Glass buttons compensate for the darker local layers with a milkier fill and the original 16px blur");
 assert(desktop.actionHeights.content.every((height) => height === 48) && desktop.actionHeights.header === 32, "Primary content actions share the 48px control height while the navigation CTA remains intentionally compact");
+assert(desktop.heroEntrance.eyebrowIsReveal && desktop.heroEntrance.titleWrapperDuration === 0 && desktop.heroEntrance.headingDelay === 160, "Hero entrance starts with the eyebrow while the heading wrapper itself remains stationary");
+assert(desktop.heroEntrance.lineDelays.every((delay, index) => delay === index * 100) && desktop.heroEntrance.primaryDelay === desktop.heroEntrance.headingDelay + desktop.heroEntrance.lineDelays.length * 100 && desktop.heroEntrance.secondaryDelay === desktop.heroEntrance.primaryDelay + 100, "Hero lines and the two CTAs rise in a deliberate 100ms sequence");
+assert(desktop.heroEntrance.actionTransitions.every((properties) => properties.includes("opacity") && properties.includes("transform")), "Each hero CTA owns its independent fade-and-rise transition");
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
 assert(desktop.headerUtilities.grouped && desktop.headerUtilities.controlGap >= 7 && desktop.headerUtilities.navigationGap >= 32, "Desktop languages and CTA form one spaced utility group clear of the centered navigation");
 assert(desktop.headerUtilities.activeBackground !== "rgba(0, 0, 0, 0)" && desktop.headerUtilities.visibleTrackLabels === 1, "The segmented language control marks the current locale and the animated CTA shows one resting label");

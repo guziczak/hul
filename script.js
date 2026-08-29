@@ -328,6 +328,15 @@ function splitHeading(heading) {
   });
   heading.dataset.revealLines = String(lineTops.length);
   heading.closest(".reveal")?.classList.add("reveal--chars");
+
+  const headingHero = heading.closest(".hero");
+  if (headingHero) {
+    const headingDelay = 160;
+    const primaryActionDelay = headingDelay + lineTops.length * 100;
+    headingHero.style.setProperty("--hero-heading-delay", `${headingDelay}ms`);
+    headingHero.style.setProperty("--hero-primary-action-delay", `${primaryActionDelay}ms`);
+    headingHero.style.setProperty("--hero-secondary-action-delay", `${primaryActionDelay + 100}ms`);
+  }
 }
 
 document.fonts.ready.then(() => {
