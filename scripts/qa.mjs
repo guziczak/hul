@@ -1093,6 +1093,29 @@ const stableFooterPhone = await stableFooterPhonePage.evaluate(() => {
   };
 });
 assert(stableFooterPhone.bannerGap >= 11 && stableFooterPhone.bannerGap <= 17 && stableFooterPhone.rightGap <= 0.5 && !stableFooterPhone.docked, "A slight upward scroll from the footer keeps the phone on the consent rail instead of throwing it above the CTA");
+
+await stableFooterPhonePage.locator("[data-consent-reject]").click();
+await stableFooterPhonePage.waitForTimeout(600);
+await stableFooterPhonePage.reload({ waitUntil: "networkidle" });
+await stableFooterPhonePage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, document.documentElement.scrollHeight);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await stableFooterPhonePage.waitForTimeout(900);
+const noPromptFooterActions = await stableFooterPhonePage.evaluate(() => {
+  const contactButton = document.querySelector(".contact-cta__content .motion-button").getBoundingClientRect();
+  const topAction = document.querySelector("[data-scroll-top]").getBoundingClientRect();
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  return {
+    topAlignment: Math.abs(topAction.top - contactButton.top),
+    horizontalGap: topAction.left - contactButton.right,
+    phoneGap: phone.top - topAction.bottom,
+    rightInset: innerWidth - phone.right,
+  };
+});
+assert(noPromptFooterActions.topAlignment <= 0.5 && noPromptFooterActions.horizontalGap >= 12, "Without the consent prompt, the footer arrow aligns exactly with the final CTA without covering it");
+assert(Math.abs(noPromptFooterActions.phoneGap - 8) <= 0.5 && Math.abs(noPromptFooterActions.rightInset - 8) <= 0.5, "The footer phone remains one regular gap below the arrow and aligned to the mobile right inset");
 await stableFooterPhoneContext.close();
 
 const localizedPages = [

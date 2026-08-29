@@ -596,7 +596,19 @@ function syncFloatingUiOffsets() {
       const contactContentTargetTop = contactContentRect.top - animatedContentTop - animatedContentTranslateY;
       const topActionRect = quickTop.getBoundingClientRect();
       if (contactButtonRect) {
-        const contactButtonTargetTop = contactButtonRect.top - animatedContentTop - animatedContentTranslateY;
+        const contactButtonStyle = getComputedStyle(contactCtaContent.querySelector(".motion-button"));
+        let animatedButtonTranslateY = 0;
+        if (contactButtonStyle.transform !== "none") {
+          try {
+            animatedButtonTranslateY = new DOMMatrixReadOnly(contactButtonStyle.transform).m42;
+          } catch {
+            animatedButtonTranslateY = 0;
+          }
+        }
+        const contactButtonTargetTop = contactButtonRect.top
+          - animatedContentTop
+          - animatedContentTranslateY
+          - animatedButtonTranslateY;
         const horizontalCollision = contactButtonRect.right > topActionRect.left - 12
           && contactButtonRect.left < topActionRect.right + 12;
         if (horizontalCollision) {
