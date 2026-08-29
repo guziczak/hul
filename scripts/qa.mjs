@@ -5,6 +5,20 @@ const browser = await chromium.launch({
   headless: true,
 });
 const baseUrl = process.argv[2] || "http://127.0.0.1:5173/";
+const mailTemplates = {
+  pl: {
+    subject: "Zapytanie o kuchni\u0119 na wymiar \u2014 HUL",
+    body: "Dzie\u0144 dobry,\r\n\r\nchc\u0119 porozmawia\u0107 o kuchni na wymiar.\r\n\r\nLokalizacja inwestycji:\r\nPlanowany termin:\r\nKilka s\u0142\u00f3w o wn\u0119trzu:\r\n\r\nPozdrawiam,",
+  },
+  en: {
+    subject: "Bespoke kitchen enquiry \u2014 HUL",
+    body: "Hello,\r\n\r\nI'd like to discuss a bespoke solid-wood kitchen.\r\n\r\nProject location:\r\nPreferred timeframe:\r\nA few words about the interior:\r\n\r\nBest regards,",
+  },
+  de: {
+    subject: "Anfrage zu einer ma\u00dfgefertigten K\u00fcche \u2014 HUL",
+    body: "Guten Tag,\r\n\r\nich m\u00f6chte mit Ihnen \u00fcber eine ma\u00dfgefertigte Massivholzk\u00fcche sprechen.\r\n\r\nOrt des Projekts:\r\nGew\u00fcnschter Zeitraum:\r\nKurze Beschreibung des Raums:\r\n\r\nMit freundlichen Gr\u00fc\u00dfen",
+  },
+};
 
 const failures = [];
 const checks = [];
@@ -54,6 +68,14 @@ const desktop = await page.evaluate(() => ({
   missingAnchors: [...document.querySelectorAll('a[href^="#"]')]
     .map((link) => link.getAttribute("href"))
     .filter((href) => href !== "#" && !document.querySelector(href)),
+  mailLinks: [...document.querySelectorAll('a[href^="mailto:"]')].map((link) => {
+    const url = new URL(link.href);
+    return {
+      recipient: url.pathname,
+      subject: url.searchParams.get("subject"),
+      body: url.searchParams.get("body"),
+    };
+  }),
   meta: {
     description: Boolean(document.querySelector('meta[name="description"]')?.content),
     og: Boolean(document.querySelector('meta[property="og:title"]')?.content),
@@ -161,6 +183,7 @@ assert(desktop.overflow === 0, "Desktop has no horizontal overflow");
 assert(desktop.externalRequests.length === 0, "Local page makes no external production requests");
 assert(desktop.rootAbsoluteAssets.length === 0, "Static assets use GitHub Pages-safe relative paths");
 assert(desktop.missingAnchors.length === 0, "All internal anchors resolve");
+assert(desktop.mailLinks.length === 2 && desktop.mailLinks.every((link) => link.recipient === "domar@kuchniezdrewna.pl" && link.subject === mailTemplates.pl.subject && link.body === mailTemplates.pl.body), "Polish email links open a useful localized kitchen enquiry without JavaScript");
 assert(Object.values(desktop.meta).every(Boolean), "SEO, social and schema metadata are present");
 assert(desktop.landmarkOrder, "Primary navigation precedes hero actions in DOM and focus order");
 assert(desktop.skipLink.firstFocusable && desktop.skipLink.target === "#main-content" && desktop.skipLink.mainId === "main-content", "Skip link is the first focus target and resolves to main content");
@@ -903,23 +926,40 @@ const mobileFooterConsentLayout = await acceptPage.evaluate(() => {
   const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
   const footer = document.querySelector(".footer").getBoundingClientRect();
   const quickActions = document.querySelector("[data-quick-actions]").getBoundingClientRect();
+  const contactCta = document.querySelector(".contact-cta").getBoundingClientRect();
+  const contactContent = document.querySelector(".contact-cta__content").getBoundingClientRect();
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
   return {
     footerGap: footer.top - banner.bottom,
     actionsGap: banner.top - quickActions.bottom,
     bannerTop: banner.top,
     heroActionsBottom: document.querySelector(".hero__actions").getBoundingClientRect().bottom,
+    contactGap: banner.top - contactContent.bottom,
+    contactInset: contactContent.top - contactCta.top,
+    contactReserve: contactCta.height - contactContent.height - banner.height,
+    topActionDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+    phoneVisible: phone.width === 48 && phone.height === 48,
   };
 });
 assert(mobileFooterConsentLayout.footerGap >= 7 && mobileFooterConsentLayout.actionsGap >= 11 && mobileFooterConsentLayout.bannerTop >= 8, "The mobile consent prompt clears the footer without pushing floating controls off-screen");
+assert(mobileFooterConsentLayout.contactGap >= 11 && mobileFooterConsentLayout.contactInset >= 15 && mobileFooterConsentLayout.contactReserve >= 39, "The final mobile contact CTA reserves enough real space and stays fully above consent");
+assert(mobileFooterConsentLayout.topActionDisplay === "none" && mobileFooterConsentLayout.phoneVisible, "The tight CTA state removes only the secondary top arrow and keeps immediate calling available");
 assert(Math.abs(mobileFooterConsentLayout.heroActionsBottom - mobileHeroConsentLayout.actionsBottom) <= 0.5, "Mobile footer movement leaves hero content at its fixed consent height");
 await acceptPage.locator("[data-consent-accept]").click();
+await acceptPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
 await acceptPage.locator("iframe[data-interactive-map]").waitFor({ state: "attached" });
+await acceptPage.waitForTimeout(450);
 const acceptedPrivacy = await acceptPage.evaluate(() => ({
   consent: JSON.parse(localStorage.getItem("hul:privacy-consent:v1")),
   analyticsScript: Boolean(document.querySelector("script[data-hul-analytics]")),
+  contactTop: parseFloat(getComputedStyle(document.querySelector(".contact-cta__content")).top),
+  contactMinHeight: parseFloat(getComputedStyle(document.querySelector(".contact-cta")).minHeight),
+  topActionDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+  ctaGuard: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--cta-guard"),
 }));
 assert(acceptedPrivacy.consent.analytics && acceptedPrivacy.consent.maps, "Accept all stores both optional categories");
 assert(!acceptedPrivacy.analyticsScript, "Analytics stays physically inactive until a real GA4 measurement ID is configured");
+assert(acceptedPrivacy.contactTop === 0 && acceptedPrivacy.contactMinHeight === 0 && acceptedPrivacy.topActionDisplay === "grid" && !acceptedPrivacy.ctaGuard, "Accepting consent returns the final CTA and top arrow to their normal state");
 await acceptContext.close();
 
 const localizedPages = [
@@ -1026,6 +1066,14 @@ for (const localized of localizedPages) {
       assetsAreParentRelative: assetValues.every((value) => value.startsWith("../")),
       duplicateIds: ids.length - new Set(ids).size,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      mailLinks: [...document.querySelectorAll('a[href^="mailto:"]')].map((link) => {
+        const url = new URL(link.href);
+        return {
+          recipient: url.pathname,
+          subject: url.searchParams.get("subject"),
+          body: url.searchParams.get("body"),
+        };
+      }),
       cookieTitle: document.querySelector(".cookie-banner__copy strong")?.textContent.trim(),
       bodyText: document.body.innerText,
       mapLanguage: new URL(document.querySelector("[data-contact-map]")?.dataset.mapUrl).searchParams.get("hl"),
@@ -1059,6 +1107,7 @@ for (const localized of localizedPages) {
   assert(localizedState.currentSwitchers === 2 && localizedState.hasMobileSwitcher, `${localized.code.toUpperCase()} marks the current language in both desktop and mobile switchers`);
   assert(Object.entries(localLanguageTargets).every(([language, href]) => localizedState.desktopSwitchTargets[language] === href), `${localized.code.toUpperCase()} language switcher resolves correctly under the GitHub Pages subpath`);
   assert(localizedState.assetsAreParentRelative && localizedState.duplicateIds === 0, `${localized.code.toUpperCase()} uses safe shared asset paths and unique IDs`);
+  assert(localizedState.mailLinks.length === 2 && localizedState.mailLinks.every((link) => link.recipient === "domar@kuchniezdrewna.pl" && link.subject === mailTemplates[localized.code].subject && link.body === mailTemplates[localized.code].body), `${localized.code.toUpperCase()} email links open the matching localized kitchen enquiry`);
   assert(localizedState.overflow === 0 && localizedState.mapLanguage === localized.code, `${localized.code.toUpperCase()} has no desktop overflow and requests the matching map language`);
   assert(localizedState.utilityLayout.grouped && localizedState.utilityLayout.controlGap >= 7 && localizedState.utilityLayout.navigationGap >= 24 && localizedState.utilityLayout.visibleTrackLabels === 1, `${localized.code.toUpperCase()} utility controls stay composed without duplicate visible CTA copy at 1200px`);
   assert(localizedState.phoneLayout.width >= 120 && localizedState.phoneLayout.height === 48 && localizedState.phoneLayout.label && localizedState.phoneLayout.labelOpacity === "1" && localizedState.phoneLayout.labelLines === 1, `${localized.code.toUpperCase()} desktop phone capsule keeps its localized label on one line`);
@@ -1089,8 +1138,41 @@ for (const localized of localizedPages) {
   });
   assert(localizedConsentLayout.overflow === 0 && localizedConsentLayout.bannerHeight <= 150 && localizedConsentLayout.copyLines <= 2 && localizedConsentLayout.actionRows === 1 && localizedConsentLayout.actionsInViewport && localizedConsentLayout.heroButtonsFit, `${localized.code.toUpperCase()} hero actions and consent prompt remain compact and reachable at 320px`);
   assert(localizedConsentLayout.headerGap >= 11 && localizedConsentLayout.bannerGap >= 15, `${localized.code.toUpperCase()} mobile hero stays clear of both header and consent prompt`);
+  await localizedPage.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    scrollTo(0, document.documentElement.scrollHeight);
+    document.documentElement.style.removeProperty("scroll-behavior");
+  });
+  await localizedPage.waitForTimeout(620);
+  const localizedFooterConsent = await localizedPage.evaluate(() => {
+    const header = document.querySelector(".header__top").getBoundingClientRect();
+    const cta = document.querySelector(".contact-cta").getBoundingClientRect();
+    const content = document.querySelector(".contact-cta__content").getBoundingClientRect();
+    const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+    const footer = document.querySelector(".footer").getBoundingClientRect();
+    const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+    return {
+      bannerGap: banner.top - content.bottom,
+      footerGap: footer.top - banner.bottom,
+      headerGap: content.top - header.bottom,
+      ctaInset: content.top - cta.top,
+      reserve: cta.height - content.height - banner.height,
+      topActionDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+      phoneVisible: phone.width === 48 && phone.height === 48,
+    };
+  });
+  assert(localizedFooterConsent.bannerGap >= 11 && localizedFooterConsent.footerGap >= 7 && localizedFooterConsent.headerGap >= 7 && localizedFooterConsent.ctaInset >= 15 && localizedFooterConsent.reserve >= 39, `${localized.code.toUpperCase()} final CTA remains fully readable above undecided consent at 320px`);
+  assert(localizedFooterConsent.topActionDisplay === "none" && localizedFooterConsent.phoneVisible, `${localized.code.toUpperCase()} keeps the phone but suppresses the competing top arrow beside the guarded CTA`);
   await localizedPage.locator("[data-consent-reject]").click();
   await localizedPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
+  await localizedPage.waitForTimeout(450);
+  const localizedConsentReset = await localizedPage.evaluate(() => ({
+    contentTop: parseFloat(getComputedStyle(document.querySelector(".contact-cta__content")).top),
+    minHeight: parseFloat(getComputedStyle(document.querySelector(".contact-cta")).minHeight),
+    topActionDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+    ctaGuard: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--cta-guard"),
+  }));
+  assert(localizedConsentReset.contentTop === 0 && localizedConsentReset.minHeight === 0 && localizedConsentReset.topActionDisplay === "grid" && !localizedConsentReset.ctaGuard, `${localized.code.toUpperCase()} final CTA returns to its unmodified layout after consent closes`);
   await localizedPage.setViewportSize({ width: 390, height: 844 });
   await localizedPage.locator(".menu-toggle").click();
   await localizedPage.waitForTimeout(620);

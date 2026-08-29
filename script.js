@@ -404,6 +404,9 @@ if (reducedMotion.matches) {
 /* Floating phone and back-to-top controls */
 const quickActions = document.querySelector("[data-quick-actions]");
 const quickTop = quickActions?.querySelector("[data-scroll-top]");
+const quickPhone = quickActions?.querySelector(".quick-action--phone");
+const contactCta = document.querySelector(".contact-cta");
+const contactCtaContent = contactCta?.querySelector(".contact-cta__content");
 let floatingUiFrame = 0;
 
 function updateQuickActions() {
@@ -427,6 +430,17 @@ function syncFloatingUiOffsets() {
   const quickActionsBaseBottom = mobile ? 16 : 20;
   const cookieBannerBaseBottom = mobile ? 8 : 20;
   const banner = document.querySelector("[data-cookie-banner]");
+  const bannerVisible = Boolean(banner && !banner.hidden);
+
+  // Leave enough real layout space for every localized CTA before moving its
+  // content. This keeps the adjustment deterministic even on 320px screens.
+  if (mobile && bannerVisible && contactCta && contactCtaContent) {
+    const consentMinHeight = Math.ceil(contactCtaContent.offsetHeight + banner.offsetHeight + 40);
+    contactCta.style.setProperty("--contact-cta-consent-min-height", `${consentMinHeight}px`);
+  } else {
+    contactCta?.style.removeProperty("--contact-cta-consent-min-height");
+  }
+
   const footer = document.querySelector(".footer");
   const footerRect = footer?.getBoundingClientRect();
   const visibleFooterHeight = footerRect
@@ -441,6 +455,51 @@ function syncFloatingUiOffsets() {
   }
   banner?.style.setProperty("--cookie-banner-bottom", `${cookieBannerBottom}px`);
 
+  let guardContactCta = false;
+  if (mobile && bannerVisible && contactCta && contactCtaContent) {
+    const ctaRect = contactCta.getBoundingClientRect();
+    const contentRect = contactCtaContent.getBoundingClientRect();
+    const currentTop = parseFloat(getComputedStyle(contactCtaContent).top) || 0;
+    const naturalTop = contentRect.top - currentTop;
+    const naturalBottom = contentRect.bottom - currentTop;
+    const bannerTargetTop = window.innerHeight - cookieBannerBottom - banner.offsetHeight;
+    const headerBottom = Math.max(0, header?.getBoundingClientRect().bottom || 0);
+    const ctaVisible = ctaRect.bottom > 0 && ctaRect.top < window.innerHeight;
+
+    if (ctaVisible) {
+      const requestedLift = Math.max(0, naturalBottom + 12 - bannerTargetTop);
+      const safeContentTop = Math.max(ctaRect.top + 16, headerBottom + 8, viewportGap);
+      const maximumLift = Math.max(0, naturalTop - safeContentTop);
+      const appliedLift = Math.min(Math.ceil(requestedLift), Math.floor(maximumLift));
+      contactCta.style.setProperty("--contact-cta-content-offset", `${-appliedLift}px`);
+      guardContactCta = requestedLift > 0;
+    } else {
+      contactCta.style.removeProperty("--contact-cta-content-offset");
+    }
+  } else {
+    contactCta?.style.removeProperty("--contact-cta-content-offset");
+  }
+  const compactCtaGuard = guardContactCta && window.innerWidth <= 430;
+  quickActions?.classList.toggle("quick-actions--cta-guard", compactCtaGuard);
+
+  const dockPhoneInFooter = Boolean(
+    compactCtaGuard
+      && footerRect
+      && quickPhone
+      && visibleFooterHeight >= quickPhone.offsetHeight + 16,
+  );
+  quickActions?.classList.toggle("quick-actions--footer-docked", dockPhoneInFooter);
+  if (dockPhoneInFooter && quickActions && footer) {
+    const footerMetaRect = footer.querySelector(".footer__meta")?.getBoundingClientRect();
+    const footerLogoRect = footer.querySelector(".logo")?.getBoundingClientRect();
+    const dockLeft = footerMetaRect && footerLogoRect
+      ? (footerMetaRect.right + footerLogoRect.left) / 2
+      : window.innerWidth * 0.6;
+    quickActions.style.setProperty("--quick-actions-footer-left", `${dockLeft}px`);
+  } else {
+    quickActions?.style.removeProperty("--quick-actions-footer-left");
+  }
+
   const heroContent = hero?.querySelector(".hero__content");
   const heroActions = heroContent?.querySelector(".hero__actions");
   const heroRect = hero?.getBoundingClientRect();
@@ -452,15 +511,14 @@ function syncFloatingUiOffsets() {
     : 0;
 
   if (quickActions) {
-    const bannerOffset = banner && !banner.hidden
+    const bannerOffset = bannerVisible
       ? cookieBannerBottom + banner.offsetHeight + 12
       : quickActionsBaseBottom;
     const footerOffset = quickActionsBaseBottom + visibleFooterHeight;
     let requestedQuickActionsBottom = Math.max(quickActionsBaseBottom, bannerOffset, footerOffset);
-    const phoneAction = quickActions.querySelector(".quick-action--phone");
     const heroButtons = [...(heroActions?.querySelectorAll(".motion-button") || [])];
-    if (phoneAction && heroRect && heroActions && heroButtons.length && window.scrollY < heroRect.height) {
-      const phoneRect = phoneAction.getBoundingClientRect();
+    if (quickPhone && heroRect && heroActions && heroButtons.length && window.scrollY < heroRect.height) {
+      const phoneRect = quickPhone.getBoundingClientRect();
       const horizontalCollision = heroButtons.some((button) => {
         const buttonRect = button.getBoundingClientRect();
         return buttonRect.right > phoneRect.left - 12 && buttonRect.left < phoneRect.right + 12;
@@ -468,7 +526,7 @@ function syncFloatingUiOffsets() {
       const heroActionsTargetBottom = heroRect.bottom - heroContentBottom;
       const heroActionsTargetTop = heroActionsTargetBottom - heroActions.offsetHeight;
       const phoneTargetBottom = window.innerHeight - requestedQuickActionsBottom;
-      const phoneTargetTop = phoneTargetBottom - phoneAction.offsetHeight;
+      const phoneTargetTop = phoneTargetBottom - quickPhone.offsetHeight;
       const verticalCollision = heroActionsTargetBottom > phoneTargetTop - 12
         && heroActionsTargetTop < phoneTargetBottom + 12;
       if (horizontalCollision && verticalCollision) {
@@ -477,6 +535,14 @@ function syncFloatingUiOffsets() {
           window.innerHeight - heroActionsTargetTop + 12,
         );
       }
+    }
+    if (dockPhoneInFooter && footerRect) {
+      const visibleFooterTop = Math.max(0, footerRect.top);
+      const visibleFooterBottom = Math.min(window.innerHeight, footerRect.bottom);
+      const visibleFooterCenter = (visibleFooterTop + visibleFooterBottom) / 2;
+      requestedQuickActionsBottom = window.innerHeight
+        - visibleFooterCenter
+        - quickActions.offsetHeight / 2;
     }
     const maximumQuickActionsBottom = Math.max(
       quickActionsBaseBottom,
@@ -493,7 +559,6 @@ window.addEventListener("resize", () => {
   syncFloatingUiOffsets();
 }, { passive: true });
 
-const contactCta = document.querySelector(".contact-cta");
 if (quickActions && contactCta) {
   const darkSurfaceObserver = new IntersectionObserver(
     ([entry]) => quickActions.classList.toggle("quick-actions--on-dark", entry.isIntersecting),
@@ -529,6 +594,7 @@ if (cookieBanner && typeof ResizeObserver === "function") {
   if (footer) floatingUiResizeObserver.observe(footer);
   const heroContent = hero?.querySelector(".hero__content");
   if (heroContent) floatingUiResizeObserver.observe(heroContent);
+  if (contactCtaContent) floatingUiResizeObserver.observe(contactCtaContent);
 }
 
 let bannerTimer = 0;
