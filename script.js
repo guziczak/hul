@@ -495,9 +495,10 @@ function syncFloatingUiOffsets() {
     const dockLeft = footerMetaRect && footerLogoRect
       ? (footerMetaRect.right + footerLogoRect.left) / 2
       : window.innerWidth * 0.6;
-    quickActions.style.setProperty("--quick-actions-footer-left", `${dockLeft}px`);
+    const dockRight = window.innerWidth - dockLeft - quickActions.offsetWidth / 2;
+    quickActions.style.setProperty("--quick-actions-right", `${dockRight}px`);
   } else {
-    quickActions?.style.removeProperty("--quick-actions-footer-left");
+    quickActions?.style.removeProperty("--quick-actions-right");
   }
 
   const heroContent = hero?.querySelector(".hero__content");

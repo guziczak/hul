@@ -1446,6 +1446,7 @@ html:not(.js) [data-open-privacy] {
   pointer-events: none;
   transition:
     bottom 420ms var(--ease-out),
+    right 420ms var(--ease-out),
     opacity 260ms ease,
     visibility 0s linear 0s;
 }
@@ -1520,12 +1521,6 @@ html:not(.js) [data-open-privacy] {
   display: none;
 }
 
-.quick-actions--footer-docked {
-  right: auto;
-  left: var(--quick-actions-footer-left, 60%);
-  transform: translateX(-50%);
-}
-
 .quick-actions--on-dark .quick-action--phone {
   border-color: rgba(249, 245, 235, 0.36);
   background: rgba(50, 38, 31, 0.97);
@@ -1571,7 +1566,7 @@ body.privacy-open .quick-actions {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  transition-delay: 0s, 0s, 260ms;
+  transition-delay: 0s, 0s, 0s, 260ms;
 }
 
 /* Privacy consent */
@@ -2838,7 +2833,7 @@ body.privacy-open {
   }
 
   .quick-actions {
-    right: 12px;
+    right: var(--quick-actions-right, 12px);
     bottom: var(--quick-actions-bottom, 16px);
   }
 
