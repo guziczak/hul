@@ -169,7 +169,7 @@ assert(!desktop.privacy.analyticsScript && !desktop.privacy.interactiveMap, "Opt
 assert(desktop.privacy.localMap?.includes("map-domar.jpg"), "The contact section starts with a local map preview");
 assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data contains the verified showroom address");
 assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desktop.schemaModel.pageLanguage === "pl" && ["pl", "en", "de"].every((language) => desktop.schemaModel.siteLanguages?.includes(language)), "Polish WebPage and multilingual WebSite structured data are linked correctly");
-assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.16)" && button.blur === "blur(16px)"), "Glass buttons keep the original milky 16px backdrop blur");
+assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.24)" && button.blur === "blur(16px)"), "Glass buttons compensate for the darker local layers with a milkier fill and the original 16px blur");
 assert(desktop.heroHeader.background === "rgba(22, 35, 27, 0.36)" && desktop.heroHeader.blur === "blur(12px)", "The transparent hero header keeps navigation legible over bright image areas");
 assert(desktop.headerUtilities.grouped && desktop.headerUtilities.controlGap >= 7 && desktop.headerUtilities.navigationGap >= 32, "Desktop languages and CTA form one spaced utility group clear of the centered navigation");
 assert(desktop.headerUtilities.activeBackground !== "rgba(0, 0, 0, 0)" && desktop.headerUtilities.visibleTrackLabels === 1, "The segmented language control marks the current locale and the animated CTA shows one resting label");

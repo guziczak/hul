@@ -57,6 +57,7 @@
   --paper: #f9f5eb;
   --ink: #16231b;
   --oak: #32261f;
+  --glass-fill: rgba(255, 255, 255, 0.24);
   --line: rgba(22, 35, 27, 0.16);
   --line-light: rgba(255, 255, 255, 0.16);
   --consent-rail-width: 1160px;
@@ -301,7 +302,7 @@ main {
 }
 
 .motion-button--glass {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--glass-fill);
   color: var(--paper);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
@@ -309,7 +310,7 @@ main {
 
 .motion-button--glass:hover,
 .motion-button--glass:focus-visible {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--glass-fill);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
