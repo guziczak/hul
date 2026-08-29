@@ -378,6 +378,7 @@ const topReloadStart = await topReloadPage.evaluate(() => scrollY);
 delayTopScript = true;
 await topReloadPage.reload({ waitUntil: "commit" });
 await topReloadPage.waitForFunction(() => document.readyState !== "loading");
+await topReloadPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
 const topReloadPositions = [await topReloadPage.evaluate(() => scrollY)];
 for (const delay of [50, 150, 400]) {
   await topReloadPage.waitForTimeout(delay);
