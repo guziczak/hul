@@ -2842,6 +2842,10 @@ body.privacy-open {
     padding-top: 0;
   }
 
+  .visit__details .motion-button {
+    margin-left: 5px;
+  }
+
   .visit__details address {
     font-size: 28px;
     line-height: 32px;

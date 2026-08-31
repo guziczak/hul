@@ -1179,6 +1179,7 @@ const mobileMapPhoneLayout = await stableFooterPhonePage.evaluate(() => {
     .map((button) => button.getBoundingClientRect());
   const consentButtons = [...document.querySelectorAll("[data-consent-accept], [data-consent-reject]")]
     .map((button) => button.getBoundingClientRect());
+  const routeButton = document.querySelector(".visit__details .motion-button").getBoundingClientRect();
   const intersects = phone.right > mapActions.left + 1
     && phone.left < mapActions.right - 1
     && phone.bottom > mapActions.top + 1
@@ -1189,12 +1190,14 @@ const mobileMapPhoneLayout = await stableFooterPhonePage.evaluate(() => {
     groupWidthDelta: Math.abs(mapActions.width - consentActions.width),
     mapGap: mapButtons[1].left - mapButtons[0].right,
     consentGap: consentButtons[1].left - consentButtons[0].right,
+    routeConsentLeftDelta: Math.abs(routeButton.left - consentButtons[0].left),
     widths: [...mapButtons, ...consentButtons].map((rect) => rect.width),
     heights: [...mapButtons, ...consentButtons].map((rect) => rect.height),
   };
 });
 assert(!mobileMapPhoneLayout.intersects && mobileMapPhoneLayout.phoneMapGap >= 11, "The mobile phone rises above the complete map CTA row instead of covering Google Maps");
 assert(mobileMapPhoneLayout.groupWidthDelta <= 0.5 && Math.abs(mobileMapPhoneLayout.mapGap - 12) <= 0.5 && Math.abs(mobileMapPhoneLayout.consentGap - 12) <= 0.5 && mobileMapPhoneLayout.widths.every((width) => Math.abs(width - 165) <= 0.5) && mobileMapPhoneLayout.heights.every((height) => Math.abs(height - 40) <= 0.5), "430px map and consent pairs share the same complete 342px by 40px control geometry");
+assert(mobileMapPhoneLayout.routeConsentLeftDelta <= 0.5, "430px directions and accept actions share the exact same left edge");
 await stableFooterPhonePage.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
