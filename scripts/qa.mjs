@@ -522,14 +522,16 @@ let mobileState = await page.evaluate(() => ({
   heroImage: document.querySelector(".hero__media img").currentSrc,
   phoneWidth: document.querySelector(".quick-action--phone").getBoundingClientRect().width,
   phoneLabelDisplay: getComputedStyle(document.querySelector(".quick-action--phone .quick-action__tooltip")).display,
-  phoneHeroTopGap: Math.abs(
-    document.querySelector(".quick-action--phone").getBoundingClientRect().top
-      - document.querySelector(".hero__actions").getBoundingClientRect().top
-  ),
-  phoneHeroBottomGap: Math.abs(
-    document.querySelector(".quick-action--phone").getBoundingClientRect().bottom
-      - document.querySelector(".hero__actions").getBoundingClientRect().bottom
-  ),
+  phoneClearsHeroActions: (() => {
+    const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+    return [...document.querySelectorAll(".hero__actions .motion-button")].every((action) => {
+      const rect = action.getBoundingClientRect();
+      return rect.right <= phone.left - 11
+        || rect.left >= phone.right + 11
+        || rect.bottom <= phone.top - 11
+        || rect.top >= phone.bottom + 11;
+    });
+  })(),
   heroActionWidths: [...document.querySelectorAll(".hero__actions .motion-button")].map((button) => button.getBoundingClientRect().width),
   mapActionWidths: [...document.querySelectorAll(".map-preview__actions > *")].map((button) => button.getBoundingClientRect().width),
   routeActionWidth: document.querySelector(".visit__details .motion-button").getBoundingClientRect().width,
@@ -539,7 +541,7 @@ assert(mobileState.overflow === 0, "Mobile has no horizontal overflow");
 assert(mobileState.menuInert && mobileState.menuHidden === "true", "Closed mobile navigation is removed from focus order");
 assert(mobileState.heroImage.includes("hero-mobile"), "Mobile loads the dedicated hero crop");
 assert(mobileState.phoneWidth === 48 && mobileState.phoneLabelDisplay === "none", "Mobile keeps the compact thumb-friendly phone icon");
-assert(mobileState.phoneHeroTopGap <= 0.5 && mobileState.phoneHeroBottomGap <= 0.5, "Mobile phone aligns vertically with hero actions whenever there is safe horizontal room");
+assert(mobileState.phoneClearsHeroActions, "Mobile phone keeps a safe gap from the equal-width hero actions");
 assert(Math.abs(mobileState.heroActionWidths[0] - mobileState.heroActionWidths[1]) <= 0.5 && Math.abs(mobileState.mapActionWidths[0] - mobileState.mapActionWidths[1]) <= 0.5 && Math.abs(mobileState.routeActionWidth - 154) <= 0.5, "Mobile hero, map and directions actions follow the equal-width button system");
 
 const raisedPhoneBottom = await page.locator(".quick-action--phone").evaluate((phone) => innerHeight - phone.getBoundingClientRect().bottom);
