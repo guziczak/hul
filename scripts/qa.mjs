@@ -872,6 +872,63 @@ assert(
 );
 await dynamicIphoneContext.close();
 
+const underreportedLargeViewportContext = await browser.newContext({
+  ...devices["iPhone 15 Pro Max"],
+  viewport: { width: 430, height: 735 },
+  screen: { width: 430, height: 932 },
+});
+await underreportedLargeViewportContext.addInitScript(() => {
+  localStorage.setItem("hul:privacy-consent:v1", JSON.stringify({ version: 1, analytics: false, maps: false }));
+});
+let underreportedLargeViewportCssApplied = false;
+await underreportedLargeViewportContext.route("**/src/styles.css", async (route) => {
+  const response = await route.fetch();
+  const sourceCss = await response.text();
+  const largeViewportDeclaration = "height: var(--hero-media-height, 100lvh);";
+  underreportedLargeViewportCssApplied = sourceCss.includes(largeViewportDeclaration);
+  const css = sourceCss.replace(
+    largeViewportDeclaration,
+    "height: var(--hero-media-height, 625px);",
+  );
+  await route.fulfill({ response, body: css, contentType: "text/css" });
+});
+const underreportedLargeViewportPage = await underreportedLargeViewportContext.newPage();
+await underreportedLargeViewportPage.goto(baseUrl, { waitUntil: "networkidle" });
+const underreportedLargeViewportStates = [];
+for (const viewportHeight of [735, 789, 839, 735]) {
+  if (underreportedLargeViewportStates.length) {
+    await underreportedLargeViewportPage.evaluate(() => scrollTo(0, 12));
+    await underreportedLargeViewportPage.setViewportSize({ width: 430, height: viewportHeight });
+  }
+  await underreportedLargeViewportPage.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  underreportedLargeViewportStates.push(await underreportedLargeViewportPage.evaluate(() => {
+    const hero = document.querySelector(".hero").getBoundingClientRect();
+    const mediaElement = document.querySelector(".hero__media");
+    const media = mediaElement.getBoundingClientRect();
+    const image = mediaElement.querySelector("img");
+    return {
+      heroHeight: hero.height,
+      mediaHeight: media.height,
+      uncoveredBottom: Math.max(0, hero.bottom - media.bottom),
+      lockedHeight: parseFloat(mediaElement.style.getPropertyValue("--hero-media-height")),
+      currentSrc: image.currentSrc,
+      imageTransform: getComputedStyle(image).transform,
+    };
+  }));
+}
+const underreportedMediaHeights = underreportedLargeViewportStates.map((state) => state.mediaHeight);
+assert(
+  underreportedLargeViewportCssApplied
+    && Math.max(...underreportedMediaHeights) - Math.min(...underreportedMediaHeights) <= 0.5
+    && underreportedLargeViewportStates.every((state) => state.mediaHeight + 0.5 >= state.heroHeight
+      && state.uncoveredBottom <= 0.5
+      && Math.abs(state.lockedHeight - 839) <= 1
+      && state.currentSrc === underreportedLargeViewportStates[0].currentSrc
+      && state.imageTransform === "none"),
+  "Brave-style underreported 100lvh keeps one stable hero crop with no exposed bottom strip",
+);
+await underreportedLargeViewportContext.close();
+
 const noJsPage = await browser.newPage({
   javaScriptEnabled: false,
   viewport: { width: 390, height: 844 },

@@ -110,6 +110,7 @@ function lockMobileHeroMediaHeight(force = false) {
 
   const cssLargeViewportHeight = heroMedia.getBoundingClientRect().height;
   const visibleViewportHeight = window.visualViewport?.height || window.innerHeight;
+  const heroHeight = hero?.getBoundingClientRect().height || visibleViewportHeight;
   const touchLikeDevice = window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
   const screenWidth = Math.min(window.screen.width, window.screen.height);
   const screenHeight = Math.max(window.screen.width, window.screen.height);
@@ -119,14 +120,23 @@ function lockMobileHeroMediaHeight(force = false) {
   // The full iPhone screen includes persistent safe-area UI. A 1.95 ratio
   // matches the largest usable Safari viewport without over-zooming the crop.
   const projectedSafeViewportHeight = Math.min(projectedScreenHeight, layoutWidth * 1.95);
-  const largeUnitLooksDynamic = Math.abs(cssLargeViewportHeight - visibleViewportHeight) <= 4;
+  // A broken `100lvh` may be clamped by the 680px CSS minimum. If it cannot
+  // even overscan the currently visible hero, it is not a trustworthy large
+  // viewport measurement and needs the screen-based fallback.
+  const currentCoverHeight = Math.max(visibleViewportHeight, heroHeight);
+  const largeUnitCannotOverscan = cssLargeViewportHeight <= currentCoverHeight + 4;
   const hasCollapsibleBrowserChrome = projectedScreenHeight - visibleViewportHeight >= 48;
 
   // Some iOS WebViews expose 100lvh as the current small viewport. In that
   // case reserve the large safe viewport before the toolbar starts moving.
-  const stableHeight = touchLikeDevice && largeUnitLooksDynamic && hasCollapsibleBrowserChrome
-    ? Math.max(cssLargeViewportHeight, projectedSafeViewportHeight)
-    : cssLargeViewportHeight;
+  const useProjectedFallback = touchLikeDevice
+    && largeUnitCannotOverscan
+    && hasCollapsibleBrowserChrome;
+  const stableHeight = Math.max(
+    cssLargeViewportHeight,
+    currentCoverHeight,
+    useProjectedFallback ? projectedSafeViewportHeight : 0,
+  );
 
   heroMedia.style.setProperty("--hero-media-height", `${Math.ceil(stableHeight)}px`);
 }
