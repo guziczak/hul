@@ -125,6 +125,11 @@ const desktop = await page.evaluate(() => ({
     ].map((button) => button.getBoundingClientRect().height),
     header: document.querySelector(".header .motion-button--compact").getBoundingClientRect().height,
   },
+  actionWidths: {
+    hero: [...document.querySelectorAll(".hero__actions .motion-button")].map((button) => button.getBoundingClientRect().width),
+    route: document.querySelector(".visit__details .motion-button").getBoundingClientRect().width,
+    map: [...document.querySelectorAll(".map-preview__actions > *")].map((button) => button.getBoundingClientRect().width),
+  },
   heroEntrance: (() => {
     const heroElement = document.querySelector(".hero");
     const title = document.querySelector(".hero__title");
@@ -222,6 +227,8 @@ assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data conta
 assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desktop.schemaModel.pageLanguage === "pl" && ["pl", "en", "de"].every((language) => desktop.schemaModel.siteLanguages?.includes(language)), "Polish WebPage and multilingual WebSite structured data are linked correctly");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.24)" && button.blur === "blur(16px)"), "Glass buttons compensate for the darker local layers with a milkier fill and the original 16px blur");
 assert(desktop.actionHeights.content.every((height) => height === 48) && desktop.actionHeights.header === 32, "Primary content actions share the 48px control height while the navigation CTA remains intentionally compact");
+assert(desktop.actionWidths.hero.every((width) => Math.abs(width - 154) <= 0.5) && Math.abs(desktop.actionWidths.route - 154) <= 0.5, "Desktop hero actions and the directions CTA share the compact motion-button width");
+assert(desktop.actionWidths.map.every((width) => Math.abs(width - 210) <= 0.5), "Desktop map actions form an equal-width localized pair");
 assert(desktop.heroEntrance.eyebrowIsReveal && desktop.heroEntrance.titleWrapperDuration === 0 && desktop.heroEntrance.headingDelay === 160, "Hero entrance starts with the eyebrow while the heading wrapper itself remains stationary");
 assert(desktop.heroEntrance.lineDelays.every((delay, index) => delay === index * 100) && desktop.heroEntrance.primaryDelay === desktop.heroEntrance.headingDelay + desktop.heroEntrance.lineDelays.length * 100 && desktop.heroEntrance.secondaryDelay === desktop.heroEntrance.primaryDelay, "Hero lines rise in sequence before both CTAs enter together");
 assert(desktop.heroEntrance.actionTransitions.every((properties) => properties.includes("opacity") && properties.includes("transform")), "Each hero CTA owns its independent fade-and-rise transition");
@@ -523,6 +530,9 @@ let mobileState = await page.evaluate(() => ({
     document.querySelector(".quick-action--phone").getBoundingClientRect().bottom
       - document.querySelector(".hero__actions").getBoundingClientRect().bottom
   ),
+  heroActionWidths: [...document.querySelectorAll(".hero__actions .motion-button")].map((button) => button.getBoundingClientRect().width),
+  mapActionWidths: [...document.querySelectorAll(".map-preview__actions > *")].map((button) => button.getBoundingClientRect().width),
+  routeActionWidth: document.querySelector(".visit__details .motion-button").getBoundingClientRect().width,
 }));
 assert(mobileState.ctaLines === 3, "Mobile CTA keeps the target three-line split after resize");
 assert(mobileState.overflow === 0, "Mobile has no horizontal overflow");
@@ -530,6 +540,7 @@ assert(mobileState.menuInert && mobileState.menuHidden === "true", "Closed mobil
 assert(mobileState.heroImage.includes("hero-mobile"), "Mobile loads the dedicated hero crop");
 assert(mobileState.phoneWidth === 48 && mobileState.phoneLabelDisplay === "none", "Mobile keeps the compact thumb-friendly phone icon");
 assert(mobileState.phoneHeroTopGap <= 0.5 && mobileState.phoneHeroBottomGap <= 0.5, "Mobile phone aligns vertically with hero actions whenever there is safe horizontal room");
+assert(Math.abs(mobileState.heroActionWidths[0] - mobileState.heroActionWidths[1]) <= 0.5 && Math.abs(mobileState.mapActionWidths[0] - mobileState.mapActionWidths[1]) <= 0.5 && Math.abs(mobileState.routeActionWidth - 154) <= 0.5, "Mobile hero, map and directions actions follow the equal-width button system");
 
 const raisedPhoneBottom = await page.locator(".quick-action--phone").evaluate((phone) => innerHeight - phone.getBoundingClientRect().bottom);
 await page.evaluate(() => {
@@ -645,11 +656,16 @@ for (const width of [320, 431, 768, 810, 1199, 1200, 1664, 1920]) {
         lineHeight: getComputedStyle(heading).lineHeight,
         buttonFontSize: style.fontSize,
         buttonPadding: style.paddingLeft,
+        buttonWidths: [...document.querySelectorAll(".hero__actions .motion-button")].map((action) => action.getBoundingClientRect().width),
+        mapButtonWidths: [...document.querySelectorAll(".map-preview__actions > *")].map((action) => action.getBoundingClientRect().width),
+        mapButtonPadding: getComputedStyle(document.querySelector(".map-preview__button")).paddingLeft,
+        routeButtonWidth: document.querySelector(".visit__details .motion-button").getBoundingClientRect().width,
         phoneClearance,
       };
     });
     assert(hero.lines === 4 && hero.fontSize === "36px" && hero.lineHeight === "36px", "320px hero keeps the target four-line 36px heading");
-    assert(hero.buttonFontSize === "16px" && hero.buttonPadding === "16px", "320px hero buttons keep target typography and padding");
+    assert(hero.buttonFontSize === "16px" && hero.buttonPadding === "6px", "320px hero buttons keep their typography and use compact padding so equal columns do not clip labels");
+    assert(Math.abs(hero.buttonWidths[0] - hero.buttonWidths[1]) <= 0.5 && Math.abs(hero.mapButtonWidths[0] - hero.mapButtonWidths[1]) <= 0.5 && hero.mapButtonPadding === "6px" && Math.abs(hero.routeButtonWidth - 154) <= 0.5, "320px keeps both action pairs equal and the standalone directions CTA on the shared width token");
     assert(hero.phoneClearance, "The permanent phone action clears hero CTAs at 320px without a consent prompt");
     const cardOverlap = await page.evaluate(() => {
       const quote = document.querySelector(".expert-card__quote").getBoundingClientRect();
