@@ -560,21 +560,33 @@ function syncFloatingUiOffsets() {
     const mapActions = document.querySelector(".map-preview__actions");
     if (mobile && quickPhone && mapActions?.offsetParent) {
       const mapActionsRect = mapActions.getBoundingClientRect();
-      const mapActionsVisible = mapActionsRect.bottom > 0
-        && mapActionsRect.top < window.innerHeight;
+      const mapReveal = mapActions.closest("[data-contact-map]");
+      const mapRevealTransform = mapReveal ? getComputedStyle(mapReveal).transform : "none";
+      let mapRevealTranslateY = 0;
+      if (mapRevealTransform !== "none") {
+        try {
+          mapRevealTranslateY = new DOMMatrixReadOnly(mapRevealTransform).m42;
+        } catch {
+          mapRevealTranslateY = 0;
+        }
+      }
+      const mapActionsTargetTop = mapActionsRect.top - mapRevealTranslateY;
+      const mapActionsTargetBottom = mapActionsRect.bottom - mapRevealTranslateY;
+      const mapActionsVisible = mapActionsTargetBottom > 0
+        && mapActionsTargetTop < window.innerHeight;
       const phoneTargetRight = window.innerWidth - 8;
       const phoneTargetLeft = phoneTargetRight - quickPhone.offsetWidth;
       const horizontalCollision = mapActionsRect.right > phoneTargetLeft - 12
         && mapActionsRect.left < phoneTargetRight + 12;
       const phoneTargetBottom = window.innerHeight - requestedQuickActionsBottom;
       const phoneTargetTop = phoneTargetBottom - quickPhone.offsetHeight;
-      const verticalCollision = mapActionsRect.bottom > phoneTargetTop - 12
-        && mapActionsRect.top < phoneTargetBottom + 12;
+      const verticalCollision = mapActionsTargetBottom > phoneTargetTop - 12
+        && mapActionsTargetTop < phoneTargetBottom + 12;
 
       if (mapActionsVisible && horizontalCollision && verticalCollision) {
         requestedQuickActionsBottom = Math.max(
           requestedQuickActionsBottom,
-          window.innerHeight - mapActionsRect.top + 12,
+          window.innerHeight - mapActionsTargetTop + 12,
         );
         protectQuickActionsFromHeader = true;
       }

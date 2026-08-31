@@ -1163,6 +1163,38 @@ const stableFooterPhoneContext = await browser.newContext({ viewport: { width: 4
 const stableFooterPhonePage = await stableFooterPhoneContext.newPage();
 await stableFooterPhonePage.goto(baseUrl, { waitUntil: "networkidle" });
 await stableFooterPhonePage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+await stableFooterPhonePage.locator("[data-contact-map]").scrollIntoViewIfNeeded();
+await stableFooterPhonePage.waitForTimeout(80);
+await stableFooterPhonePage.evaluate(() => {
+  const mapActions = document.querySelector(".map-preview__actions").getBoundingClientRect();
+  const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  scrollBy(0, mapActions.bottom - (banner.top - 12));
+});
+await stableFooterPhonePage.waitForTimeout(720);
+const mobileMapPhoneLayout = await stableFooterPhonePage.evaluate(() => {
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  const mapActions = document.querySelector(".map-preview__actions").getBoundingClientRect();
+  const consentActions = document.querySelector(".cookie-banner__actions").getBoundingClientRect();
+  const mapButtons = [...document.querySelectorAll(".map-preview__actions > *")]
+    .map((button) => button.getBoundingClientRect());
+  const consentButtons = [...document.querySelectorAll("[data-consent-accept], [data-consent-reject]")]
+    .map((button) => button.getBoundingClientRect());
+  const intersects = phone.right > mapActions.left + 1
+    && phone.left < mapActions.right - 1
+    && phone.bottom > mapActions.top + 1
+    && phone.top < mapActions.bottom - 1;
+  return {
+    intersects,
+    phoneMapGap: mapActions.top - phone.bottom,
+    groupWidthDelta: Math.abs(mapActions.width - consentActions.width),
+    mapGap: mapButtons[1].left - mapButtons[0].right,
+    consentGap: consentButtons[1].left - consentButtons[0].right,
+    widths: [...mapButtons, ...consentButtons].map((rect) => rect.width),
+    heights: [...mapButtons, ...consentButtons].map((rect) => rect.height),
+  };
+});
+assert(!mobileMapPhoneLayout.intersects && mobileMapPhoneLayout.phoneMapGap >= 11, "The mobile phone rises above the complete map CTA row instead of covering Google Maps");
+assert(mobileMapPhoneLayout.groupWidthDelta <= 0.5 && Math.abs(mobileMapPhoneLayout.mapGap - 12) <= 0.5 && Math.abs(mobileMapPhoneLayout.consentGap - 12) <= 0.5 && mobileMapPhoneLayout.widths.every((width) => Math.abs(width - 165) <= 0.5) && mobileMapPhoneLayout.heights.every((height) => Math.abs(height - 40) <= 0.5), "430px map and consent pairs share the same complete 342px by 40px control geometry");
 await stableFooterPhonePage.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
