@@ -227,8 +227,11 @@ assert(desktop.schemaAddress?.includes("Braniborska 14"), "Structured data conta
 assert(desktop.schemaModel.pageUrl === "https://guziczak.github.io/hul/" && desktop.schemaModel.pageLanguage === "pl" && ["pl", "en", "de"].every((language) => desktop.schemaModel.siteLanguages?.includes(language)), "Polish WebPage and multilingual WebSite structured data are linked correctly");
 assert(desktop.glassButtons.every((button) => button.background === "rgba(255, 255, 255, 0.24)" && button.blur === "blur(16px)"), "Glass buttons compensate for the darker local layers with a milkier fill and the original 16px blur");
 assert(desktop.actionHeights.content.every((height) => height === 48) && desktop.actionHeights.header === 32, "Primary content actions share the 48px control height while the navigation CTA remains intentionally compact");
-assert(desktop.actionWidths.hero.every((width) => Math.abs(width - 154) <= 0.5) && Math.abs(desktop.actionWidths.route - 154) <= 0.5, "Desktop hero actions and the directions CTA share the compact motion-button width");
-assert(desktop.actionWidths.map.every((width) => Math.abs(width - 210) <= 0.5), "Desktop map actions form an equal-width localized pair");
+assert([
+  ...desktop.actionWidths.hero,
+  desktop.actionWidths.route,
+  ...desktop.actionWidths.map,
+].every((width) => Math.abs(width - 210) <= 0.5), "Desktop hero, directions and map actions share the literal 210px button width");
 assert(desktop.heroEntrance.eyebrowIsReveal && desktop.heroEntrance.titleWrapperDuration === 0 && desktop.heroEntrance.headingDelay === 160, "Hero entrance starts with the eyebrow while the heading wrapper itself remains stationary");
 assert(desktop.heroEntrance.lineDelays.every((delay, index) => delay === index * 100) && desktop.heroEntrance.primaryDelay === desktop.heroEntrance.headingDelay + desktop.heroEntrance.lineDelays.length * 100 && desktop.heroEntrance.secondaryDelay === desktop.heroEntrance.primaryDelay, "Hero lines rise in sequence before both CTAs enter together");
 assert(desktop.heroEntrance.actionTransitions.every((properties) => properties.includes("opacity") && properties.includes("transform")), "Each hero CTA owns its independent fade-and-rise transition");
@@ -263,6 +266,8 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
   const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
   const topAction = document.querySelector("[data-scroll-top]").getBoundingClientRect();
   const phoneLabel = document.querySelector(".quick-action--phone .quick-action__tooltip");
+  const cookieTitle = document.querySelector(".cookie-banner__copy strong").getBoundingClientRect();
+  const settings = document.querySelector("[data-consent-settings]").getBoundingClientRect();
   return {
     headerGap: content.top - header.bottom,
     bannerGap: banner.top - actions.bottom,
@@ -277,6 +282,11 @@ const desktopHeroConsentLayout = await page.evaluate(() => {
     topRightGap: Math.abs(topAction.right - phone.right),
     phoneLabelVisible: getComputedStyle(phoneLabel).opacity === "1"
       && getComputedStyle(phoneLabel).position === "static",
+    consentWidths: [...document.querySelectorAll("[data-consent-accept], [data-consent-reject]")]
+      .map((button) => button.getBoundingClientRect().width),
+    consentActionCount: document.querySelector(".cookie-banner__actions").children.length,
+    settingsInCopy: document.querySelector("[data-consent-settings]").parentElement.classList.contains("cookie-banner__copy"),
+    settingsTitleOffset: Math.abs(settings.top - cookieTitle.top),
   };
 });
 assert(desktopHeroConsentLayout.headerGap >= 19 && desktopHeroConsentLayout.bannerGap >= 19, "The desktop hero content stays between the header and an undecided consent prompt");
@@ -284,6 +294,8 @@ assert(Math.abs(desktopHeroConsentLayout.actionsBottom - desktop.heroActionsBott
 assert(desktopHeroConsentLayout.phoneWidth >= 120 && desktopHeroConsentLayout.phoneHeight === 48 && desktopHeroConsentLayout.phoneLabelVisible, "Desktop presents the permanent phone as a readable oak call capsule");
 assert(desktopHeroConsentLayout.phoneHeroTopGap <= 0.5 && desktopHeroConsentLayout.phoneHeroBottomGap <= 0.5, "Desktop phone aligns vertically with the opening hero actions while consent is pending");
 assert(desktopHeroConsentLayout.phoneRightGap <= 0.5 && desktopHeroConsentLayout.phoneBannerGap >= 11, "Desktop phone aligns with the consent rail and remains directly above it");
+assert(desktopHeroConsentLayout.consentWidths.every((width) => Math.abs(width - 210) <= 0.5), "Desktop consent actions use the same literal 210px width as every content action");
+assert(desktopHeroConsentLayout.consentActionCount === 2 && desktopHeroConsentLayout.settingsInCopy && desktopHeroConsentLayout.settingsTitleOffset <= 0.5, "Consent settings sit beside the title while the primary action row contains only accept and reject");
 await page.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
@@ -542,7 +554,11 @@ assert(mobileState.menuInert && mobileState.menuHidden === "true", "Closed mobil
 assert(mobileState.heroImage.includes("hero-mobile"), "Mobile loads the dedicated hero crop");
 assert(mobileState.phoneWidth === 48 && mobileState.phoneLabelDisplay === "none", "Mobile keeps the compact thumb-friendly phone icon");
 assert(mobileState.phoneClearsHeroActions, "Mobile phone keeps a safe gap from the equal-width hero actions");
-assert(Math.abs(mobileState.heroActionWidths[0] - mobileState.heroActionWidths[1]) <= 0.5 && Math.abs(mobileState.mapActionWidths[0] - mobileState.mapActionWidths[1]) <= 0.5 && Math.abs(mobileState.routeActionWidth - 154) <= 0.5, "Mobile hero, map and directions actions follow the equal-width button system");
+assert([
+  ...mobileState.heroActionWidths,
+  ...mobileState.mapActionWidths,
+  mobileState.routeActionWidth,
+].every((width) => Math.abs(width - 145) <= 0.5), "390px hero, map and directions actions share the literal responsive width");
 
 const raisedPhoneBottom = await page.locator(".quick-action--phone").evaluate((phone) => innerHeight - phone.getBoundingClientRect().bottom);
 await page.evaluate(() => {
@@ -667,7 +683,11 @@ for (const width of [320, 431, 768, 810, 1199, 1200, 1664, 1920]) {
     });
     assert(hero.lines === 4 && hero.fontSize === "36px" && hero.lineHeight === "36px", "320px hero keeps the target four-line 36px heading");
     assert(hero.buttonFontSize === "16px" && hero.buttonPadding === "6px", "320px hero buttons keep their typography and use compact padding so equal columns do not clip labels");
-    assert(Math.abs(hero.buttonWidths[0] - hero.buttonWidths[1]) <= 0.5 && Math.abs(hero.mapButtonWidths[0] - hero.mapButtonWidths[1]) <= 0.5 && hero.mapButtonPadding === "6px" && Math.abs(hero.routeButtonWidth - 154) <= 0.5, "320px keeps both action pairs equal and the standalone directions CTA on the shared width token");
+    assert([
+      ...hero.buttonWidths,
+      ...hero.mapButtonWidths,
+      hero.routeButtonWidth,
+    ].every((buttonWidth) => Math.abs(buttonWidth - 134) <= 0.5) && hero.mapButtonPadding === "5px", "320px gives hero, map and directions actions the same literal 134px width without clipping labels");
     assert(hero.phoneClearance, "The permanent phone action clears hero CTAs at 320px without a consent prompt");
     const cardOverlap = await page.evaluate(() => {
       const quote = document.querySelector(".expert-card__quote").getBoundingClientRect();
@@ -996,25 +1016,42 @@ await acceptPage.evaluate(() => {
 });
 await acceptPage.waitForFunction(() => document.querySelector("[data-scroll-top]").classList.contains("is-visible"));
 await acceptPage.waitForTimeout(520);
-const mobileBannerLayout = await acceptPage.evaluate(() => ({
-  overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  bannerTop: document.querySelector("[data-cookie-banner]").getBoundingClientRect().top,
-  bannerHeight: document.querySelector("[data-cookie-banner]").getBoundingClientRect().height,
-  copyLines: Math.round(
-    document.querySelector(".cookie-banner__copy p").getBoundingClientRect().height
-      / parseFloat(getComputedStyle(document.querySelector(".cookie-banner__copy p")).lineHeight),
-  ),
-  actions: [...document.querySelectorAll("[data-cookie-banner] button")].map((button) => {
-    const rect = button.getBoundingClientRect();
-    return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
-  }),
-  quickActions: [...document.querySelectorAll(".quick-action.is-visible")].map((action) => {
-    const rect = action.getBoundingClientRect();
-    return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
-  }),
-}));
-assert(mobileBannerLayout.overflow === 0 && mobileBannerLayout.actions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= 568), "The complete consent prompt stays reachable at 320px");
-assert(new Set(mobileBannerLayout.actions.map((rect) => Math.round(rect.top))).size === 1 && mobileBannerLayout.copyLines <= 2 && mobileBannerLayout.bannerHeight <= 150, "The mobile consent prompt keeps three actions on one row and compact copy at 320px");
+const mobileBannerLayout = await acceptPage.evaluate(() => {
+  const primaryActions = [...document.querySelectorAll("[data-consent-accept], [data-consent-reject]")]
+    .map((button) => button.getBoundingClientRect());
+  const settings = document.querySelector("[data-consent-settings]").getBoundingClientRect();
+  const title = document.querySelector(".cookie-banner__copy strong").getBoundingClientRect();
+  return {
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    bannerTop: document.querySelector("[data-cookie-banner]").getBoundingClientRect().top,
+    bannerHeight: document.querySelector("[data-cookie-banner]").getBoundingClientRect().height,
+    copyLines: Math.round(
+      document.querySelector(".cookie-banner__copy p").getBoundingClientRect().height
+        / parseFloat(getComputedStyle(document.querySelector(".cookie-banner__copy p")).lineHeight),
+    ),
+    primaryActions: primaryActions.map((rect) => ({
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+    })),
+    settings: { left: settings.left, right: settings.right, top: settings.top, bottom: settings.bottom },
+    settingsTitleOffset: Math.abs(settings.top - title.top),
+    sharedWidths: [
+      ...document.querySelectorAll(".hero__actions .motion-button, .map-preview__actions > *"),
+      document.querySelector(".visit__details .motion-button"),
+      ...document.querySelectorAll("[data-consent-accept], [data-consent-reject]"),
+    ].map((button) => button.getBoundingClientRect().width),
+    quickActions: [...document.querySelectorAll(".quick-action.is-visible")].map((action) => {
+      const rect = action.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    }),
+  };
+});
+assert(mobileBannerLayout.overflow === 0 && [...mobileBannerLayout.primaryActions, mobileBannerLayout.settings].every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= 568), "The complete consent prompt stays reachable at 320px");
+assert(new Set(mobileBannerLayout.primaryActions.map((rect) => Math.round(rect.top))).size === 1 && mobileBannerLayout.primaryActions.every((rect) => Math.abs(rect.width - 134) <= 0.5) && mobileBannerLayout.sharedWidths.every((width) => Math.abs(width - 134) <= 0.5), "Every 320px content and consent action uses the same literal 134px width");
+assert(mobileBannerLayout.settingsTitleOffset <= 0.5 && mobileBannerLayout.copyLines <= 2 && mobileBannerLayout.bannerHeight <= 150, "Mobile consent settings sit beside the title while the copy remains compact at 320px");
 assert(mobileBannerLayout.quickActions.length === 2 && mobileBannerLayout.quickActions.every((rect) => rect.left >= 0 && rect.right <= 320 && rect.top >= 0 && rect.bottom <= mobileBannerLayout.bannerTop - 8), "Floating actions move above the mobile consent prompt without overlap");
 await acceptPage.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
@@ -1095,8 +1132,12 @@ const wideMobileActionWidths = await wideMobileConsentPage.evaluate(() => ({
   map: [...document.querySelectorAll(".map-preview__actions > *")].map((button) => button.getBoundingClientRect().width),
   consent: [...document.querySelectorAll("[data-consent-accept], [data-consent-reject]")].map((button) => button.getBoundingClientRect().width),
 }));
-assert(wideMobileActionWidths.hero.every((width) => Math.abs(width - 154) <= 0.5) && Math.abs(wideMobileActionWidths.route - 154) <= 0.5, "Wide mobile keeps both hero actions and the directions CTA on the shared motion-button width");
-assert(wideMobileActionWidths.map.every((width) => Math.abs(width - 176) <= 0.5) && Math.abs(wideMobileActionWidths.consent[0] - wideMobileActionWidths.consent[1]) <= 0.5, "Wide mobile map and consent action pairs use equal columns");
+assert([
+  ...wideMobileActionWidths.hero,
+  wideMobileActionWidths.route,
+  ...wideMobileActionWidths.map,
+  ...wideMobileActionWidths.consent,
+].every((width) => Math.abs(width - 210) <= 0.5), "Wide mobile gives hero, directions, map and consent actions the same literal 210px width");
 await wideMobileConsentPage.evaluate(() => {
   document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, document.documentElement.scrollHeight);
@@ -1330,7 +1371,10 @@ for (const localized of localizedPages) {
     const hero = document.querySelector(".hero__content").getBoundingClientRect();
     const heroActions = document.querySelector(".hero__actions").getBoundingClientRect();
     const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
-    const consentActions = [...document.querySelectorAll("[data-cookie-banner] button")].map((button) => button.getBoundingClientRect());
+    const consentActions = [...document.querySelectorAll("[data-consent-accept], [data-consent-reject]")]
+      .map((button) => button.getBoundingClientRect());
+    const settings = document.querySelector("[data-consent-settings]").getBoundingClientRect();
+    const title = document.querySelector(".cookie-banner__copy strong").getBoundingClientRect();
     const copy = document.querySelector(".cookie-banner__copy p");
     return {
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -1339,12 +1383,22 @@ for (const localized of localizedPages) {
       bannerHeight: banner.height,
       copyLines: Math.round(copy.getBoundingClientRect().height / parseFloat(getComputedStyle(copy).lineHeight)),
       actionRows: new Set(consentActions.map((rect) => Math.round(rect.top))).size,
-      actionsInViewport: consentActions.every((rect) => rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight),
+      actionsInViewport: [...consentActions, settings]
+        .every((rect) => rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight),
+      settingsTitleOffset: Math.abs(settings.top - title.top),
+      settingsInCopy: document.querySelector("[data-consent-settings]").parentElement.classList.contains("cookie-banner__copy"),
+      sharedWidths: [
+        ...document.querySelectorAll(".hero__actions .motion-button, .map-preview__actions > *"),
+        document.querySelector(".visit__details .motion-button"),
+        ...document.querySelectorAll("[data-consent-accept], [data-consent-reject]"),
+      ].map((button) => button.getBoundingClientRect().width),
       heroButtonsFit: [...document.querySelectorAll(".hero__actions .motion-button__track")]
         .every((track) => track.scrollWidth <= track.clientWidth + 1),
     };
   });
   assert(localizedConsentLayout.overflow === 0 && localizedConsentLayout.bannerHeight <= 150 && localizedConsentLayout.copyLines <= 2 && localizedConsentLayout.actionRows === 1 && localizedConsentLayout.actionsInViewport && localizedConsentLayout.heroButtonsFit, `${localized.code.toUpperCase()} hero actions and consent prompt remain compact and reachable at 320px`);
+  assert(localizedConsentLayout.sharedWidths.every((width) => Math.abs(width - 134) <= 0.5), `${localized.code.toUpperCase()} hero, directions, map and consent actions share the literal 134px mobile width`);
+  assert(localizedConsentLayout.settingsInCopy && localizedConsentLayout.settingsTitleOffset <= 0.5, `${localized.code.toUpperCase()} consent settings align with the localized prompt title`);
   assert(localizedConsentLayout.headerGap >= 11 && localizedConsentLayout.bannerGap >= 15, `${localized.code.toUpperCase()} mobile hero stays clear of both header and consent prompt`);
   await localizedPage.evaluate(() => {
     document.documentElement.style.scrollBehavior = "auto";
