@@ -1082,6 +1082,40 @@ assert(!acceptedPrivacy.analyticsScript, "Analytics stays physically inactive un
 assert(Math.abs(acceptedPrivacy.contactTop) <= 0.5 && Math.abs(acceptedPrivacy.contactMinHeight) <= 0.5 && acceptedPrivacy.topActionDisplay === "grid" && !acceptedPrivacy.ctaGuard && !acceptedPrivacy.phoneDocked && !acceptedPrivacy.inlineOffset && !acceptedPrivacy.inlineMinHeight, "Accepting consent returns the final CTA, phone and top arrow to their normal state");
 await acceptContext.close();
 
+const wideMobileConsentContext = await browser.newContext({ viewport: { width: 700, height: 932 } });
+const wideMobileConsentPage = await wideMobileConsentContext.newPage();
+await wideMobileConsentPage.goto(baseUrl, { waitUntil: "networkidle" });
+await wideMobileConsentPage.evaluate(() => document.fonts.ready);
+await wideMobileConsentPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+const wideMobileActionWidths = await wideMobileConsentPage.evaluate(() => ({
+  hero: [...document.querySelectorAll(".hero__actions .motion-button")].map((button) => button.getBoundingClientRect().width),
+  route: document.querySelector(".visit__details .motion-button").getBoundingClientRect().width,
+  map: [...document.querySelectorAll(".map-preview__actions > *")].map((button) => button.getBoundingClientRect().width),
+  consent: [...document.querySelectorAll("[data-consent-accept], [data-consent-reject]")].map((button) => button.getBoundingClientRect().width),
+}));
+assert(wideMobileActionWidths.hero.every((width) => Math.abs(width - 154) <= 0.5) && Math.abs(wideMobileActionWidths.route - 154) <= 0.5, "Wide mobile keeps both hero actions and the directions CTA on the shared motion-button width");
+assert(wideMobileActionWidths.map.every((width) => Math.abs(width - 176) <= 0.5) && Math.abs(wideMobileActionWidths.consent[0] - wideMobileActionWidths.consent[1]) <= 0.5, "Wide mobile map and consent action pairs use equal columns");
+await wideMobileConsentPage.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  scrollTo(0, document.documentElement.scrollHeight);
+  document.documentElement.style.removeProperty("scroll-behavior");
+});
+await wideMobileConsentPage.waitForTimeout(620);
+const wideMobileFooterConsent = await wideMobileConsentPage.evaluate(() => {
+  const banner = document.querySelector("[data-cookie-banner]").getBoundingClientRect();
+  const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+  const quickActions = document.querySelector("[data-quick-actions]");
+  return {
+    topActionDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+    guarded: quickActions.classList.contains("quick-actions--cta-guard"),
+    phoneWidth: phone.width,
+    phoneHeight: phone.height,
+    phoneBannerGap: banner.top - phone.bottom,
+  };
+});
+assert(wideMobileFooterConsent.topActionDisplay === "none" && wideMobileFooterConsent.guarded && wideMobileFooterConsent.phoneWidth === 48 && wideMobileFooterConsent.phoneHeight === 48 && wideMobileFooterConsent.phoneBannerGap >= 11, "The Edge-width mobile footer hides the competing arrow while keeping the phone above undecided consent");
+await wideMobileConsentContext.close();
+
 const stableFooterPhoneContext = await browser.newContext({ viewport: { width: 430, height: 932 } });
 const stableFooterPhonePage = await stableFooterPhoneContext.newPage();
 await stableFooterPhonePage.goto(baseUrl, { waitUntil: "networkidle" });
