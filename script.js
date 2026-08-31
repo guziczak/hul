@@ -503,7 +503,7 @@ function syncFloatingUiOffsets() {
     contactCta?.style.removeProperty("--contact-cta-content-offset");
   }
   const compactCtaGuard = guardContactCta && window.innerWidth <= 430;
-  quickActions?.classList.toggle("quick-actions--cta-guard", compactCtaGuard);
+  quickActions?.classList.toggle("quick-actions--cta-guard", guardContactCta);
 
   const heroContent = hero?.querySelector(".hero__content");
   const heroActions = heroContent?.querySelector(".hero__actions");
