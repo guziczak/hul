@@ -63,7 +63,7 @@
   --consent-rail-width: 1160px;
   --motion-action-width: 210px;
   --motion-pair-width: 432px;
-  --map-pair-width: 428px;
+  --map-pair-width: var(--motion-pair-width);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1265,7 +1265,7 @@ html:not(.js) .faq-item__icon {
   width: min(calc(100% - 40px), var(--map-pair-width));
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .map-preview__button,
@@ -2437,7 +2437,7 @@ body.privacy-open {
   :root {
     --motion-action-width: clamp(134px, calc(50vw - 50px), 210px);
     --motion-pair-width: clamp(280px, calc(100vw - 88px), 432px);
-    --map-pair-width: clamp(276px, calc(100vw - 92px), 428px);
+    --map-pair-width: var(--motion-pair-width);
   }
 
   .error-content__translations {
@@ -2882,7 +2882,7 @@ body.privacy-open {
   .map-preview__button,
   .map-preview__actions a {
     display: inline-flex;
-    min-height: 38px;
+    min-height: 40px;
     align-items: center;
     justify-content: center;
     padding: 8px 5px;

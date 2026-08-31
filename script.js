@@ -554,6 +554,32 @@ function syncFloatingUiOffsets() {
       }
     }
 
+    // The mobile phone rail shares the right edge with the map controls. When
+    // the map CTA row enters that rail, keep the phone above the complete row
+    // instead of covering the Google Maps action.
+    const mapActions = document.querySelector(".map-preview__actions");
+    if (mobile && quickPhone && mapActions?.offsetParent) {
+      const mapActionsRect = mapActions.getBoundingClientRect();
+      const mapActionsVisible = mapActionsRect.bottom > 0
+        && mapActionsRect.top < window.innerHeight;
+      const phoneTargetRight = window.innerWidth - 8;
+      const phoneTargetLeft = phoneTargetRight - quickPhone.offsetWidth;
+      const horizontalCollision = mapActionsRect.right > phoneTargetLeft - 12
+        && mapActionsRect.left < phoneTargetRight + 12;
+      const phoneTargetBottom = window.innerHeight - requestedQuickActionsBottom;
+      const phoneTargetTop = phoneTargetBottom - quickPhone.offsetHeight;
+      const verticalCollision = mapActionsRect.bottom > phoneTargetTop - 12
+        && mapActionsRect.top < phoneTargetBottom + 12;
+
+      if (mapActionsVisible && horizontalCollision && verticalCollision) {
+        requestedQuickActionsBottom = Math.max(
+          requestedQuickActionsBottom,
+          window.innerHeight - mapActionsRect.top + 12,
+        );
+        protectQuickActionsFromHeader = true;
+      }
+    }
+
     // Only genuinely narrow screens need a separate vertical lane above the
     // final CTA. Wider phones keep the control directly above the consent
     // rail; reacting to the heading's full layout box caused false jumps even
