@@ -454,9 +454,18 @@ function syncFloatingUiOffsets() {
   const bannerVisible = Boolean(banner && !banner.hidden);
 
   // Leave enough real layout space for every localized CTA before moving its
-  // content. This keeps the adjustment deterministic even on 320px screens.
-  if (mobile && bannerVisible && contactCta && contactCtaContent) {
-    const consentMinHeight = Math.ceil(contactCtaContent.offsetHeight + banner.offsetHeight + 40);
+  // content. The consent rail can collide at any viewport width, so this is
+  // based on the rendered geometry rather than the page's mobile breakpoint.
+  if (bannerVisible && contactCta && contactCtaContent) {
+    const consentSafetyReserve = Math.max(
+      40,
+      16 + cookieBannerBaseBottom + 12, // Section inset + banner rail + visual clearance.
+    );
+    const consentMinHeight = Math.ceil(
+      contactCtaContent.offsetHeight
+      + banner.offsetHeight
+      + consentSafetyReserve,
+    );
     contactCta.style.setProperty("--contact-cta-consent-min-height", `${consentMinHeight}px`);
   } else {
     contactCta?.style.removeProperty("--contact-cta-consent-min-height");
@@ -478,7 +487,7 @@ function syncFloatingUiOffsets() {
 
   let guardContactCta = false;
   let contactCtaTargetTop = null;
-  if (mobile && bannerVisible && contactCta && contactCtaContent) {
+  if (bannerVisible && contactCta && contactCtaContent) {
     const ctaRect = contactCta.getBoundingClientRect();
     const contentRect = contactCtaContent.getBoundingClientRect();
     const currentTop = parseFloat(getComputedStyle(contactCtaContent).top) || 0;

@@ -2241,6 +2241,12 @@ body.privacy-open {
   .header--open .menu-toggle span:nth-child(2) { opacity: 0; }
   .header--open .menu-toggle span:nth-child(3) { top: 20px; transform: rotate(-45deg); }
 
+}
+
+/* The consent copy and its fixed-width action pair fit comfortably side by
+   side from 900px onward. Below that, keep the component stacked regardless
+   of the page's wider tablet layout. */
+@media (max-width: 899px) {
   .cookie-banner {
     grid-template-columns: 1fr;
     gap: 16px;

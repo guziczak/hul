@@ -1159,6 +1159,76 @@ const wideMobileFooterConsent = await wideMobileConsentPage.evaluate(() => {
 assert(wideMobileFooterConsent.topActionDisplay === "none" && wideMobileFooterConsent.guarded && wideMobileFooterConsent.phoneWidth === 48 && wideMobileFooterConsent.phoneHeight === 48 && wideMobileFooterConsent.phoneBannerGap >= 11, "The Edge-width mobile footer hides the competing arrow while keeping the phone above undecided consent");
 await wideMobileConsentContext.close();
 
+const consentBoundaryContext = await browser.newContext({ viewport: { width: 809, height: 700 } });
+const consentBoundaryPage = await consentBoundaryContext.newPage();
+await consentBoundaryPage.goto(baseUrl, { waitUntil: "networkidle" });
+await consentBoundaryPage.evaluate(() => document.fonts.ready);
+await consentBoundaryPage.locator("[data-cookie-banner]").waitFor({ state: "visible" });
+for (const height of [700, 900]) {
+  for (const width of [809, 810, 899, 900, 1199, 1200]) {
+    await consentBoundaryPage.setViewportSize({ width, height });
+    await consentBoundaryPage.evaluate(() => {
+      document.documentElement.style.scrollBehavior = "auto";
+      scrollTo(0, document.documentElement.scrollHeight);
+      document.documentElement.style.removeProperty("scroll-behavior");
+    });
+    await consentBoundaryPage.waitForTimeout(620);
+    const boundaryLayout = await consentBoundaryPage.evaluate(() => {
+      const bannerElement = document.querySelector("[data-cookie-banner]");
+      const banner = bannerElement.getBoundingClientRect();
+      const contactCta = document.querySelector(".contact-cta").getBoundingClientRect();
+      const contactContentElement = document.querySelector(".contact-cta__content");
+      const contactContent = contactContentElement.getBoundingClientRect();
+      const footer = document.querySelector(".footer").getBoundingClientRect();
+      const header = document.querySelector(".header__top").getBoundingClientRect();
+      const phone = document.querySelector(".quick-action--phone").getBoundingClientRect();
+      const copy = document.querySelector(".cookie-banner__copy p");
+      const mobile = innerWidth <= 809;
+      return {
+        bannerHeight: banner.height,
+        bannerColumns: getComputedStyle(bannerElement).gridTemplateColumns.trim().split(/\s+/).length,
+        copyLines: Math.round(copy.getBoundingClientRect().height / parseFloat(getComputedStyle(copy).lineHeight)),
+        contentGap: banner.top - contactContent.bottom,
+        footerGap: footer.top - banner.bottom,
+        phoneGap: banner.top - phone.bottom,
+        contentSafeTop: contactContent.top - Math.max(contactCta.top + 16, header.bottom + 8, mobile ? 8 : 20),
+        guard: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--cta-guard"),
+        arrowDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+        inlineReserve: parseFloat(document.querySelector(".contact-cta").style.getPropertyValue("--contact-cta-consent-min-height")),
+        requiredReserve: contactContentElement.offsetHeight + banner.height + (mobile ? 40 : 48),
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    assert(boundaryLayout.overflow === 0 && boundaryLayout.contentGap >= 11 && boundaryLayout.contentSafeTop >= -1, `Pending consent keeps the final CTA readable at ${width}x${height}`);
+    assert(boundaryLayout.phoneGap >= 11 && boundaryLayout.footerGap >= (width <= 809 ? 7 : 19), `Pending consent keeps floating UI and footer clear at ${width}x${height}`);
+    assert(boundaryLayout.inlineReserve + 1 >= boundaryLayout.requiredReserve, `Final CTA reserves enough real layout space at ${width}x${height}`);
+    if (width <= 899) {
+      assert(boundaryLayout.bannerColumns === 1 && boundaryLayout.bannerHeight <= 150, `Consent stacks compactly through ${width}px`);
+    } else {
+      assert(boundaryLayout.bannerColumns === 2 && boundaryLayout.bannerHeight <= 113.5 && boundaryLayout.copyLines <= 2, `Consent uses its compact horizontal layout from ${width}px`);
+    }
+    if (width <= 1199) {
+      assert(boundaryLayout.guard && boundaryLayout.arrowDisplay === "none", `A real CTA collision suppresses only the secondary arrow at ${width}x${height}`);
+    } else {
+      assert(!boundaryLayout.guard && boundaryLayout.arrowDisplay === "grid", `Desktop keeps its natural CTA and arrow layout at ${width}x${height}`);
+    }
+  }
+}
+await consentBoundaryPage.setViewportSize({ width: 810, height: 700 });
+await consentBoundaryPage.locator("[data-consent-reject]").click();
+await consentBoundaryPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
+await consentBoundaryPage.waitForTimeout(450);
+const tabletConsentReset = await consentBoundaryPage.evaluate(() => ({
+  contentTop: parseFloat(getComputedStyle(document.querySelector(".contact-cta__content")).top),
+  minHeight: parseFloat(getComputedStyle(document.querySelector(".contact-cta")).minHeight),
+  arrowDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+  guard: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--cta-guard"),
+  inlineOffset: document.querySelector(".contact-cta").style.getPropertyValue("--contact-cta-content-offset"),
+  inlineReserve: document.querySelector(".contact-cta").style.getPropertyValue("--contact-cta-consent-min-height"),
+}));
+assert(Math.abs(tabletConsentReset.contentTop) <= 0.5 && Math.abs(tabletConsentReset.minHeight) <= 0.5 && tabletConsentReset.arrowDisplay === "grid" && !tabletConsentReset.guard && !tabletConsentReset.inlineOffset && !tabletConsentReset.inlineReserve, "Closing consent fully restores the tablet CTA and floating controls");
+await consentBoundaryContext.close();
+
 const stableFooterPhoneContext = await browser.newContext({ viewport: { width: 430, height: 932 } });
 const stableFooterPhonePage = await stableFooterPhoneContext.newPage();
 await stableFooterPhonePage.goto(baseUrl, { waitUntil: "networkidle" });
@@ -1508,6 +1578,29 @@ for (const localized of localizedPages) {
     });
     assert(germanNarrowEdge.bannerGap >= 11 && germanNarrowEdge.safeTop >= -1, "DE final CTA also clears consent at the former 360px breakpoint edge");
   }
+  await localizedPage.setViewportSize({ width: 900, height: 700 });
+  await localizedPage.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    scrollTo(0, document.documentElement.scrollHeight);
+    document.documentElement.style.removeProperty("scroll-behavior");
+  });
+  await localizedPage.waitForTimeout(620);
+  const localizedTabletConsent = await localizedPage.evaluate(() => {
+    const bannerElement = document.querySelector("[data-cookie-banner]");
+    const banner = bannerElement.getBoundingClientRect();
+    const content = document.querySelector(".contact-cta__content").getBoundingClientRect();
+    const copy = document.querySelector(".cookie-banner__copy p");
+    return {
+      columns: getComputedStyle(bannerElement).gridTemplateColumns.trim().split(/\s+/).length,
+      bannerHeight: banner.height,
+      copyLines: Math.round(copy.getBoundingClientRect().height / parseFloat(getComputedStyle(copy).lineHeight)),
+      contentGap: banner.top - content.bottom,
+      guard: document.querySelector("[data-quick-actions]").classList.contains("quick-actions--cta-guard"),
+      arrowDisplay: getComputedStyle(document.querySelector("[data-scroll-top]")).display,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  assert(localizedTabletConsent.columns === 2 && localizedTabletConsent.bannerHeight <= 113.5 && localizedTabletConsent.copyLines <= 2 && localizedTabletConsent.contentGap >= 11 && localizedTabletConsent.guard && localizedTabletConsent.arrowDisplay === "none" && localizedTabletConsent.overflow === 0, `${localized.code.toUpperCase()} keeps compact consent clear of the final CTA at the 900px component boundary`);
   await localizedPage.locator("[data-consent-reject]").click();
   await localizedPage.locator("[data-cookie-banner]").waitFor({ state: "hidden" });
   await localizedPage.waitForTimeout(450);
